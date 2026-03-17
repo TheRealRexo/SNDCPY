@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.SNDCPY.app"
-        minSdk 26 // ✅ Android 8.0+
+        minSdk 26
         targetSdk 34
         versionCode 3
         versionName "0.3.0"
@@ -25,7 +25,6 @@ android {
         viewBinding true
     }
 
-    // ✅ Java/Kotlin alignment (fixes your CI error)
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
