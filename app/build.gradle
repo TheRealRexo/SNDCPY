@@ -4,12 +4,12 @@ plugins {
 }
 
 android {
-    namespace 'com.example.remotecontrolserver'
+    namespace 'com.SNDCPY.app'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.remotecontrolserver"
-        minSdk 29
+        applicationId "com.SNDCPY.app"
+        minSdk 26 // ✅ Android 8.0+
         targetSdk 34
         versionCode 3
         versionName "0.3.0"
@@ -23,6 +23,16 @@ android {
 
     buildFeatures {
         viewBinding true
+    }
+
+    // ✅ Java/Kotlin alignment (fixes your CI error)
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 }
 
