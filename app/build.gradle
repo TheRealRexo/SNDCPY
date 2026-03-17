@@ -4,15 +4,15 @@ plugins {
 }
 
 android {
-    namespace 'com.SNDCPY.app'
+    namespace 'com.SNDCPY.server'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.SNDCPY.app"
+        applicationId "com.SNDCPY.server"
         minSdk 26
         targetSdk 34
-        versionCode 3
-        versionName "0.3.0"
+        versionCode 4
+        versionName "0.4.0-beta"
     }
 
     buildTypes {
@@ -25,13 +25,12 @@ android {
         viewBinding true
     }
 
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    kotlin {
+        jvmToolchain(17)
     }
 }
 
