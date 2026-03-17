@@ -128,32 +128,32 @@ Audio pipeline:
 
 Input injection remains restricted to authenticated sessions in planned secure versions.
 
-## Version Roadmap Status
+## Version Roadmap (With Status's)
 
-### ✅ 0.1.0 (Completed)
+### 0.1.0 (Completed)
 
 - Clean architecture skeleton
 - Deterministic Gradle build
 - Module separation
 - CI-ready foundation
 
-### ✅ 0.2.0 (Completed)
+### 0.2.0 (Completed)
 
 - Basic TCP server (`server/TcpControlServer`)
 - Local discovery prototype (`discovery/LocalDiscoveryPrototype`)
 - Session establishment (`server/SessionManager` + `server/Session`)
 
-### ✅ 0.3.0 (Completed)
+### 0.3.0 (Completed)
 
 - Video streaming prototype (`streaming/VideoStreamingPrototype`)
 - Basic input injection (`input/BasicInputInjector`)
 
-### ⏳ 0.5.0 (Planned)
+### 0.5.0 (Planned)
 
 - Secure pairing layer
 - Encrypted session transport
 
-### ⏳ 1.0.0 (Planned)
+### 1.0.0 (Planned)
 
 - Production-grade low-latency remote control server
 
