@@ -1,9 +1,9 @@
-package com.example.remotecontrolserver
+package com.SNDCPY.server
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.example.remotecontrolserver.databinding.ActivityMainBinding
-import com.example.remotecontrolserver.runtime.RemoteControlRuntime
+import com.SNDCPY.server.databinding.ActivityMainBinding
+import com.SNDCPY.server.runtime.RemoteControlRuntime
 
 class MainActivity : AppCompatActivity() {
 
