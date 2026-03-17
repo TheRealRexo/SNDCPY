@@ -4,15 +4,15 @@ plugins {
 }
 
 android {
-    namespace 'com.example.remotecontrolserver'
+    namespace 'com.SNDCPY.server'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.remotecontrolserver"
-        minSdk 29
+        applicationId "com.SNDCPY.server"
+        minSdk 26
         targetSdk 34
-        versionCode 3
-        versionName "0.3.0"
+        versionCode 4
+        versionName "0.4.0-beta"
     }
 
     buildTypes {
@@ -23,6 +23,14 @@ android {
 
     buildFeatures {
         viewBinding true
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    kotlin {
+        jvmToolchain(17)
     }
 }
 

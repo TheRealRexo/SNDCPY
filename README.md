@@ -128,7 +128,7 @@ Audio pipeline:
 
 Input injection remains restricted to authenticated sessions in planned secure versions.
 
-## Version Roadmap Status
+## Version Roadmap (With Status's)
 
 ### 0.1.0 (Completed)
 
