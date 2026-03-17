@@ -148,6 +148,12 @@ Input injection remains restricted to authenticated sessions in planned secure v
 - Video streaming prototype (`streaming/VideoStreamingPrototype`)
 - Basic input injection (`input/BasicInputInjector`)
 
+### 0.4.0 (Currently being worked on)
+
+- Fully built working server apk
+- First official release in the releases tab (not a tag)
+- Fully built working ios client ipa
+
 ### 0.5.0 (Planned)
 
 - Secure pairing layer
