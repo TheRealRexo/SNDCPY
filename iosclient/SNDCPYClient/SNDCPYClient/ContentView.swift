@@ -583,8 +583,7 @@ struct ContentView: View {
                     .font(.caption)
                     .foregroundColor(.gray)
 
-                if showPairingBox {
-                    VStack(spacing: 8) {
+                VStack(spacing: 8) {
                         Text("Enter the 6-digit code shown on the server")
                             .font(.caption)
                             .foregroundColor(.gray)
@@ -596,18 +595,12 @@ struct ContentView: View {
                                 .frame(width: 180)
                             Button("Pair") {
                                 engine.setPairingCode(pairingInput)
-                                showPairingBox = false
+                                pairingInput = ""
                             }
                             .buttonStyle(.borderedProminent)
-                            Button("Cancel") {
-                                engine.setPairingCode("")
-                                showPairingBox = false
-                            }
-                            .buttonStyle(.bordered)
                         }
                     }
                     .padding(.horizontal)
-                }
 
                 ZStack {
                     H264View(sink: engine.sink)
