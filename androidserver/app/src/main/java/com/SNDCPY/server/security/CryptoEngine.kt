@@ -65,13 +65,31 @@ object CryptoEngine {
 
     /** Encodes a P-256 public key as X963 raw point (0x04 || x || y). */
     private fun x963Encode(publicKey: PublicKey): ByteArray {
-        val w = publicKey.w
+        // Cast to ECPublicKey to access the W point (affine coordinates)
+        val ecKey = publicKey as java.security.interfaces.ECPublicKey
+        val w = ecKey.w
         val x = w.x
         val y = w.y
         val buf = ByteArray(1 + 64)
         buf[0] = 0x04
-        x.toByteArray().copyOf(32).copyInto(buf, 1, 0, 32)
-        y.toByteArray().copyOf(32).copyInto(buf, 33, 0, 32)
+        // Copy x as big-endian 32 bytes into bytes 1..32
+        val xBytes = x.toByteArray()
+        // Ensure xBytes is exactly 32 bytes (pad with leading zeros if needed)
+        val xPadded = if (xBytes.size >= 32) xBytes.copyOfRange(0, 32) else {
+            val padded = ByteArray(32)
+            xBytes.copyInto(padded.copyOfRange(32 - xBytes.size, 32))
+            padded
+        }
+        xPadded.copyInto(buf, 1)
+        // Copy y as big-endian 32 bytes into bytes 33..64
+        val yBytes = y.toByteArray()
+        // Ensure yBytes is exactly 32 bytes (pad with leading zeros if needed)
+        val yPadded = if (yBytes.size >= 32) yBytes.copyOfRange(0, 32) else {
+            val padded = ByteArray(32)
+            yBytes.copyInto(padded.copyOfRange(32 - yBytes.size, 32))
+            padded
+        }
+        yPadded.copyInto(buf, 33)
         return buf
     }
 
@@ -82,7 +100,7 @@ object CryptoEngine {
         val y = BigInteger(1, raw.copyOfRange(33, 65))
         val spec = ECGenParameterSpec("prime256v1")
         return KeyFactory.getInstance(KEY_ALGORITHM)
-            .generatePublic(ECPublicKeySpec(ECPoint(x, y), spec))
+            .generatePublic(ECPublicKeySpec(ECPoint(x, y), spec as java.security.spec.ECParameterSpec))
     }
 
     /** Stable SHA-256 fingerprint of a public key, uppercase hex. */
@@ -100,8 +118,7 @@ object CryptoEngine {
     fun decodeBytes(encoded: String): ByteArray =
         Base64.getDecoder().decode(encoded)
 
-    /**
-     * Derives the AES-256 session key from the ECDH shared secret,
+    /** Derives the AES-256 session key from the ECDH shared secret,
      * salted with both handshake nonces so every session is unique.
      */
     fun deriveSessionKey(
@@ -136,9 +153,7 @@ object CryptoEngine {
         return cipher.doFinal(ciphertext)
     }
 
-    /**
-     * RFC 5869 HKDF (extract + expand) over HMAC-SHA256.
-     */
+    /** RFC 5869 HKDF (extract + expand) over HMAC-SHA256. */
     private fun hkdfSha256(ikm: ByteArray, salt: ByteArray, info: ByteArray, outputLengthBytes: Int): ByteArray {
         val prk = hmacSha256(if (salt.isEmpty()) ByteArray(32) else salt, ikm)
         val output = ByteArrayOutputStream(outputLengthBytes)
