@@ -38,7 +38,11 @@ class MainActivity : AppCompatActivity() {
 
         runtime.start()
 
-        binding.pairingButton.setOnClickListener { runtime.issuePairingCode() }
+        // Auto-issue the first pairing code on startup so it is visible immediately.
+        refreshPairingCode()
+
+        binding.pairingButton.setOnClickListener { refreshPairingCode() }
+        binding.refreshPairingButton.setOnClickListener { refreshPairingCode() }
         binding.startCaptureButton.setOnClickListener { requestScreenCapture() }
         binding.stopCaptureButton.setOnClickListener { runtime.stopCapture() }
         binding.enableInputButton.setOnClickListener { openAccessibilitySettings() }
@@ -57,7 +61,22 @@ class MainActivity : AppCompatActivity() {
         projectionRequest.launch(manager.createScreenCaptureIntent())
     }
 
+    private fun refreshPairingCode() {
+        val code = runtime.issuePairingCode()
+        binding.pairingCodeView.text = formatCode(code)
+    }
+
+    private fun formatCode(code: String): String {
+        if (code.length != 6) return code
+        return code.chunked(2).joinToString(" ")
+    }
+
     private fun openAccessibilitySettings() {
+        // Only jump to accessibility settings if the SNDCPY service is not enabled.
+        if (runtime.isRemoteInputEnabled()) {
+            appendStatus("Remote input is already enabled")
+            return
+        }
         startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
     }
 

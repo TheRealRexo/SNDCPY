@@ -30,6 +30,8 @@ class ClientActivity : AppCompatActivity() {
     private lateinit var statusTextView: android.widget.TextView
     private lateinit var touchSurfaceView: TouchSurfaceView
     private lateinit var videoSurfaceView: VideoSurfaceView
+    private lateinit var pairingCodeEditText: EditText
+    private lateinit var sendPairingCodeButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +47,8 @@ class ClientActivity : AppCompatActivity() {
         statusTextView = findViewById(R.id.statusTextView)
         touchSurfaceView = findViewById(R.id.touchSurfaceView)
         videoSurfaceView = findViewById(R.id.videoSurfaceView)
+        pairingCodeEditText = findViewById(R.id.pairingCodeEditText)
+        sendPairingCodeButton = findViewById(R.id.sendPairingCodeButton)
 
         hostEditText.setText("192.168.1.42")
         portEditText.setText("27183")
@@ -62,6 +66,12 @@ class ClientActivity : AppCompatActivity() {
             override fun onPointerUp(pointerId: Int) {
                 client?.sendControl("POINTER_UP $pointerId")
             }
+        }
+
+        sendPairingCodeButton.setOnClickListener {
+            val code = pairingCodeEditText.text.toString().trim()
+            client?.submitPairingCode(code)
+            pairingCodeEditText.text.clear()
         }
 
         connectButton.setOnClickListener { startConnect() }
@@ -96,7 +106,13 @@ class ClientActivity : AppCompatActivity() {
 
         val c = SndcpyClient(host, port)
         client = c
-        c.onPairingRequired = { showPairingDialog() }
+        c.onPairingRequired = {
+            runOnUiThread {
+                pairingCodeEditText.visibility = android.view.View.VISIBLE
+                sendPairingCodeButton.visibility = android.view.View.VISIBLE
+                pairingCodeEditText.hint = "Enter 6-digit pairing code"
+            }
+        }
         c.connect()
         wireListener(c)
     }

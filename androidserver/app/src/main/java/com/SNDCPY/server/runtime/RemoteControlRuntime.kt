@@ -106,6 +106,9 @@ class RemoteControlRuntime(
         return accepted
     }
 
+    /** True when the accessibility service is bound and ready to inject input. */
+    fun isRemoteInputEnabled(): Boolean = inputInjector.canInject()
+
     private val whitespaceRegex = Regex("\\s+")
 
     private fun report(message: String) = statusSink(message)
