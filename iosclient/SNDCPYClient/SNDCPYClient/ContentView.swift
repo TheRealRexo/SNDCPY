@@ -339,25 +339,40 @@ final class SNDCPYEngine: ObservableObject {
     private var readFrames = true
 
     var onPairingRequired: (() -> Void)?
-    internal var pairingCode: String?
+    private var pairingCodeContinuation: CheckedContinuation<String, Never>?
 
-    func setPairingCode(_ code: String) { pairingCode = code }
+    func setPairingCode(_ code: String) {
+        pairingCodeContinuation?.resume(returning: code)
+        pairingCodeContinuation = nil
+    }
 
-    func sendPairingCode(_ code: String) {
+    func waitForPairingCode() async -> String? {
+        await withCheckedContinuation { continuation in
+            pairingCodeContinuation = continuation
+        }
+    }
+
+    func sendPairingCode(_ code: String) async {
         guard let conn = connection else { return }
-        let data = "PAIR \(code)\n".data(using: .utf8)!
-        conn.send(content: data, completion: .contentProcessed { [weak self] _ in
-            guard let self = self else { return }
-            Task { @MainActor in
-                self.readTextLine { resp in
-                    if resp.trimmingCharacters(in: .whitespaces) == "PAIRED" {
-                        self.finishConnect()
-                    } else {
-                        self.state = .failed("Pairing rejected")
+        return await withCheckedContinuation { continuation in
+            let data = "PAIR \(code)\n".data(using: .utf8)!
+            conn.send(content: data, completion: .contentProcessed { [weak self] _ in
+                guard let self = self else {
+                    continuation.resume()
+                    return
+                }
+                Task { @MainActor in
+                    self.readTextLine { resp in
+                        if resp.trimmingCharacters(in: .whitespaces) == "PAIRED" {
+                            self.finishConnect()
+                        } else {
+                            self.state = .failed("Pairing rejected")
+                        }
+                        continuation.resume()
                     }
                 }
-            }
-        })
+            })
+        }
     }
 
     func connect(host: String, port: UInt16) {
@@ -422,17 +437,11 @@ final class SNDCPYEngine: ObservableObject {
             serverNonce = Data(base64Encoded: parts[2]) ?? Data()
             deriveSession(serverPublicB64: parts[1])
             onPairingRequired?()
-            Task.detached { [weak self] in
-                guard let self = self else { return }
-                var code: String?
-                for _ in 0..<300 {
-                    try? await Task.sleep(nanoseconds: 100_000_000)
-                    if let c = await self.pairingCode, !c.isEmpty {
-                        code = c
-                        break
-                    }
+            Task { @MainActor in
+                guard let code = await self.waitForPairingCode(), !code.isEmpty else {
+                    self.state = .failed("Pairing code not provided")
+                    return
                 }
-                guard let code = code, !code.isEmpty else { return }
                 await self.sendPairingCode(code)
             }
         default:
