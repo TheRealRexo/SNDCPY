@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">SNDCPY Server</string>
     <string name="issue_pairing_code">Issue pairing code</string>
+    <string name="pairing_code_label">Pairing code</string>
+    <string name="new_code">New code</string>
+    <string name="pairing_code_hint">Show this 6-digit code to the SNDCPY client to pair.</string>
     <string name="start_capture">Start screen share</string>
     <string name="stop_capture">Stop</string>
     <string name="enable_input">Enable remote input</string>
