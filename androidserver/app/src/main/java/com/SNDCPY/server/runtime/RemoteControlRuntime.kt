@@ -34,7 +34,7 @@ class RemoteControlRuntime(
     private val nsdAdvertiser = NsdAdvertiser(appContext)
     private val udpBroadcaster = UdpBroadcaster(
         controlPort = PORT,
-        serviceName = NsdAdvertiser.defaultServiceName(),
+        serviceName = nsdAdvertiser.defaultServiceName(),
         onStatus = ::report
     )
     private val inputInjector = BasicInputInjector()
