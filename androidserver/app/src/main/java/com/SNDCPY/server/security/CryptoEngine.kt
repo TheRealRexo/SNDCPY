@@ -65,42 +65,47 @@ object CryptoEngine {
 
     /** Encodes a P-256 public key as X963 raw point (0x04 || x || y). */
     private fun x963Encode(publicKey: PublicKey): ByteArray {
-        // Cast to ECPublicKey to access the W point (affine coordinates)
         val ecKey = publicKey as java.security.interfaces.ECPublicKey
-        val w = ecKey.w
-        val x = w.x
-        val y = w.y
-        val buf = ByteArray(1 + 64)
-        buf[0] = 0x04
-        // Copy x as big-endian 32 bytes into bytes 1..32
-        val xBytes = x.toByteArray()
-        // Ensure xBytes is exactly 32 bytes (pad with leading zeros if needed)
-        val xPadded = if (xBytes.size >= 32) xBytes.copyOfRange(0, 32) else {
-            val padded = ByteArray(32)
-            xBytes.copyInto(padded.copyOfRange(32 - xBytes.size, 32))
-            padded
+        val point = ecKey.w
+        val xVal = point.x
+        val yVal = point.y
+        val buf = ByteArray(65) // 1 + 64
+        buf[0] = 0x04.toByte()
+        // Encode x as 32 big-endian bytes at buf[1..32]
+        val xBytes = xVal.toByteArray() // signed big-endian
+        var xOffset = 1
+        // If xBytes has leading zeros or is shorter than 32, pad with zeros
+        if (xBytes.size < 32) {
+            // Pad with leading zeros
+            java.util.Arrays.fill(buf, xOffset, 33, 0.toByte())
+            xOffset = 33 - xBytes.size
+            xBytes.copyInto(buf, xOffset)
+        } else {
+            // Take last 32 bytes (most significant)
+            xBytes.copyOfRange(xBytes.size - 32, xBytes.size).copyInto(buf, xOffset)
         }
-        xPadded.copyInto(buf, 1)
-        // Copy y as big-endian 32 bytes into bytes 33..64
-        val yBytes = y.toByteArray()
-        // Ensure yBytes is exactly 32 bytes (pad with leading zeros if needed)
-        val yPadded = if (yBytes.size >= 32) yBytes.copyOfRange(0, 32) else {
-            val padded = ByteArray(32)
-            yBytes.copyInto(padded.copyOfRange(32 - yBytes.size, 32))
-            padded
+        // Encode y as 32 big-endian bytes at buf[33..64]
+        val yBytes = yVal.toByteArray() // signed big-endian
+        var yOffset = 33
+        if (yBytes.size < 32) {
+            java.util.Arrays.fill(buf, yOffset, 65, 0.toByte())
+            yOffset = 65 - yBytes.size
+            yBytes.copyInto(buf, yOffset)
+        } else {
+            yBytes.copyOfRange(yBytes.size - 32, yBytes.size).copyInto(buf, yOffset)
         }
-        yPadded.copyInto(buf, 33)
         return buf
     }
 
     /** Decodes an X963 raw point (0x04 || x || y) into an ECPublicKey. */
     private fun x963Decode(raw: ByteArray): PublicKey {
         require(raw.size == 65 && raw[0] == 0x04.toByte()) { "Invalid X963 point" }
+        // x is at bytes 1..32, y is at bytes 33..64
         val x = BigInteger(1, raw.copyOfRange(1, 33))
         val y = BigInteger(1, raw.copyOfRange(33, 65))
         val spec = ECGenParameterSpec("prime256v1")
         return KeyFactory.getInstance(KEY_ALGORITHM)
-            .generatePublic(ECPublicKeySpec(ECPoint(x, y), spec as java.security.spec.ECParameterSpec))
+            .generatePublic(ECPublicKeySpec(ECPoint(x, y), spec))
     }
 
     /** Stable SHA-256 fingerprint of a public key, uppercase hex. */
