@@ -1,6 +1,7 @@
 package com.SNDCPY.server.security
 
 import java.io.ByteArrayOutputStream
+import java.math.BigInteger
 import java.security.KeyFactory
 import java.security.KeyPair
 import java.security.KeyPairGenerator
@@ -8,8 +9,10 @@ import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.SecureRandom
+import java.security.spec.ECNamedCurves
+import java.security.spec.ECPoint
+import java.security.spec.ECPublicKeySpec
 import java.security.spec.PKCS8EncodedKeySpec
-import java.security.spec.X509EncodedKeySpec
 import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.KeyAgreement
@@ -48,11 +51,10 @@ object CryptoEngine {
         }.generateKeyPair()
 
     fun encodePublicKey(publicKey: PublicKey): String =
-        Base64.getEncoder().encodeToString(publicKey.encoded)
+        Base64.getEncoder().encodeToString(x963Encode(publicKey))
 
     fun decodePublicKey(encoded: String): PublicKey =
-        KeyFactory.getInstance(KEY_ALGORITHM)
-            .generatePublic(X509EncodedKeySpec(Base64.getDecoder().decode(encoded)))
+        x963Decode(Base64.getDecoder().decode(encoded))
 
     fun encodePrivateKey(privateKey: PrivateKey): String =
         Base64.getEncoder().encodeToString(privateKey.encoded)
@@ -60,6 +62,32 @@ object CryptoEngine {
     fun decodePrivateKey(encoded: String): PrivateKey =
         KeyFactory.getInstance(KEY_ALGORITHM)
             .generatePrivate(PKCS8EncodedKeySpec(Base64.getDecoder().decode(encoded)))
+
+    /** Encodes a P-256 public key as X963 raw point (0x04 || x || y). */
+    private fun x963Encode(publicKey: PublicKey): ByteArray {
+        val ecKey = java.security.interfaces.ECPublicKey::class.java.cast(publicKey)
+        val x = ecKey.w.x
+        val y = ecKey.w.y
+        val buf = ByteArray(1 + 64)
+        buf[0] = 0x04
+        x.toByteArray().copyOf(32).copyInto(buf, 1, 0, 32)
+        y.toByteArray().copyOf(32).copyInto(buf, 33, 0, 32)
+        return buf
+    }
+
+    /** Decodes an X963 raw point (0x04 || x || y) into an ECPublicKey. */
+    private fun x963Decode(raw: ByteArray): PublicKey {
+        require(raw.size == 65 && raw[0] == 0x04.toByte()) { "Invalid X963 point" }
+        val x = BigInteger(1, raw.copyOfRange(1, 33))
+        val y = BigInteger(1, raw.copyOfRange(33, 65))
+        val spec = java.security.spec.ECParameterSpec(
+            ECNamedCurves.getCurve("prime256v1"),
+            ECNamedCurves.getCurve("prime256v1").generator,
+            ECNamedCurves.getCurve("prime256v1").order
+        )
+        return KeyFactory.getInstance(KEY_ALGORITHM)
+            .generatePublic(ECPublicKeySpec(ECPoint(x, y), spec))
+    }
 
     /** Stable SHA-256 fingerprint of a public key, uppercase hex. */
     fun fingerprint(publicKey: PublicKey): String =
