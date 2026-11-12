@@ -51,24 +51,24 @@ jobs:
       - name: Build Android Server
         run: |
           cd androidserver
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug
 
       - name: Build Android Client
         run: |
           cd androidclient
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug
 
       - name: Upload Server APK
         uses: actions/upload-artifact@v4
         with:
           name: android-server-apk
-          path: androidserver/app/build/outputs/apk/release/*.apk
+          path: androidserver/app/build/outputs/apk/debug/*.apk
 
       - name: Upload Client APK
         uses: actions/upload-artifact@v4
         with:
           name: android-client-apk
-          path: androidclient/build/outputs/apk/release/*.apk
+          path: androidclient/build/outputs/apk/debug/*.apk
 
   ios:
     name: iOS Client (App)
