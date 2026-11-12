@@ -9,7 +9,7 @@ import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.SecureRandom
-import java.security.spec.ECNamedCurves
+import java.security.spec.ECGenParameterSpec
 import java.security.spec.ECPoint
 import java.security.spec.ECPublicKeySpec
 import java.security.spec.PKCS8EncodedKeySpec
@@ -80,11 +80,7 @@ object CryptoEngine {
         require(raw.size == 65 && raw[0] == 0x04.toByte()) { "Invalid X963 point" }
         val x = BigInteger(1, raw.copyOfRange(1, 33))
         val y = BigInteger(1, raw.copyOfRange(33, 65))
-        val spec = java.security.spec.ECParameterSpec(
-            ECNamedCurves.getCurve("prime256v1"),
-            ECNamedCurves.getCurve("prime256v1").generator,
-            ECNamedCurves.getCurve("prime256v1").order
-        )
+        val spec = ECGenParameterSpec("prime256v1")
         return KeyFactory.getInstance(KEY_ALGORITHM)
             .generatePublic(ECPublicKeySpec(ECPoint(x, y), spec))
     }
