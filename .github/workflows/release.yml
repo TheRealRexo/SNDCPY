@@ -42,7 +42,6 @@ jobs:
           # Install required packages
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --install \
             "platform-tools" \
-            "platforms;34" \
             "platforms;36" \
             "build-tools;34.0.0" 2>&1 | tail -10
 
