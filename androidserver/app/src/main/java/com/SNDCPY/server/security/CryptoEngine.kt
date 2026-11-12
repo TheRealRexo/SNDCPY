@@ -66,33 +66,39 @@ object CryptoEngine {
     /** Encodes a P-256 public key as X963 raw point (0x04 || x || y). */
     private fun x963Encode(publicKey: PublicKey): ByteArray {
         val ecKey = publicKey as java.security.interfaces.ECPublicKey
-        val point = ecKey.w
-        val xVal = point.x
-        val yVal = point.y
+        // Use Java accessor methods to get affine coordinates reliably
+        val xVal = ecKey.getAffineX()
+        val yVal = ecKey.getAffineY()
         val buf = ByteArray(65) // 1 + 64
         buf[0] = 0x04.toByte()
         // Encode x as 32 big-endian bytes at buf[1..32]
-        val xBytes = xVal.toByteArray() // signed big-endian
-        var xOffset = 1
-        // If xBytes has leading zeros or is shorter than 32, pad with zeros
+        val xBytes = xVal.toByteArray() // signed big-endian, always non-negative
+        // Pad or trim to exactly 32 bytes
         if (xBytes.size < 32) {
-            // Pad with leading zeros
-            java.util.Arrays.fill(buf, xOffset, 33, 0.toByte())
-            xOffset = 33 - xBytes.size
-            xBytes.copyInto(buf, xOffset)
+            java.util.Arrays.fill(buf, 1, 33, 0.toByte())
+            // Copy xBytes starting at offset (32 - xBytes.size)
+            val copyLen = xBytes.size
+            for (i in 0 until copyLen) {
+                buf[32 - copyLen + i] = xBytes[i]
+            }
         } else {
-            // Take last 32 bytes (most significant)
-            xBytes.copyOfRange(xBytes.size - 32, xBytes.size).copyInto(buf, xOffset)
+            // Take the last 32 bytes (most significant)
+            for (i in 0 until 32) {
+                buf[1 + i] = xBytes[xBytes.size - 32 + i]
+            }
         }
         // Encode y as 32 big-endian bytes at buf[33..64]
-        val yBytes = yVal.toByteArray() // signed big-endian
-        var yOffset = 33
+        val yBytes = yVal.toByteArray() // signed big-endian, always non-negative
         if (yBytes.size < 32) {
-            java.util.Arrays.fill(buf, yOffset, 65, 0.toByte())
-            yOffset = 65 - yBytes.size
-            yBytes.copyInto(buf, yOffset)
+            java.util.Arrays.fill(buf, 33, 65, 0.toByte())
+            val copyLen = yBytes.size
+            for (i in 0 until copyLen) {
+                buf[65 - copyLen + i] = yBytes[i]
+            }
         } else {
-            yBytes.copyOfRange(yBytes.size - 32, yBytes.size).copyInto(buf, yOffset)
+            for (i in 0 until 32) {
+                buf[33 + i] = yBytes[yBytes.size - 32 + i]
+            }
         }
         return buf
     }
