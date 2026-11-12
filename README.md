@@ -30,6 +30,7 @@ Its features include:
  - [audio forwarding](androidserver/README.md#streaming-pipeline) (Android 10+)
  - [screen recording](androidserver/README.md) via the H.264 stream
  - [mDNS discovery](androidserver/README.md#networking-model) (`_sndcpy._tcp.`)
+  - [LAN UDP beacon discovery](androidserver/README.md) (port `27184`, alongside mDNS)
  - [telemetry](androidserver/README.md) (fps, heap, uptime every 5 s)
  - [configurable quality](androidserver/README.md#streaming-pipeline) (`SET_BITRATE`, `SET_FPS`)
  - physical keyboard/mouse simulation via AccessibilityService
@@ -58,8 +59,8 @@ Open the app → **Issue pairing code** → **Start screen share** → note the 
 
 ```bash
 cd androidclient
-./gradlew assembleDebug
-adb install app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleRelease
+adb install build/outputs/apk/release/app-release.apk
 # Enter the server IP in the app and tap Connect
 ```
 
@@ -112,12 +113,13 @@ On some devices (notably Xiaomi) you may need to enable **USB debugging (Securit
 
 ## Get the App
 
-- [Android Server](androidserver/) — APK from Releases or `assembleDebug`
-- [Android Client](androidclient/) — APK from Releases or `assembleDebug`
+- [Android Server](androidserver/) — APK from Releases or `assembleRelease`
+- [Android Client](androidclient/) — APK from Releases or `assembleRelease`
 - [iOS Client](iosclient/) — Unsigned device IPA for iPhone/iPad, built in Xcode
 - [macOS Client](linuxclient/) — Standalone binary for Apple Silicon (`SNDCPY-macos-1.0.0-arm64.zip`) and Intel (`SNDCPY-macos-1.0.0-x86_64.zip`), built with PyInstaller
 - [Linux Client](linuxclient/) — `sndcpy_client.py` + `.deb`, `.AppImage`, `.rpm` packages
 - [Windows Client](windowsclient/) — `sndcpy_client.py` + `.exe` installer
+- [Flatpak](flatpak/) — Flathub-ready manifest (`flatpak install flatpak/flatpakref/SNDCPY.flatpakref`)
 
 Prebuilt `1.0.0` artifacts are on the [Releases](https://github.com/TheRealRexo/SNDCPY/releases) page.
 
@@ -186,9 +188,10 @@ See [androidserver/README.md](androidserver/README.md) for channel details.
 SNDCPY/
 ├── androidserver/   → Android server (Kotlin, MediaProjection, MediaCodec)
 ├── androidclient/   → Android client (Kotlin, NW + handshake)
-├── iosclient/       → iOS / macOS client (Swift, Network.framework)
-├── linuxclient/     → Linux client (Python, sockets)
+├── iosclient/       → iOS client (Swift, UIKit, Network.framework)
+├── linuxclient/     → Cross-platform Python client (also builds macOS binaries)
 ├── windowsclient/   → Windows client (Python, sockets)
+├── flatpak/         → Flatpak manifest for Flathub
 ├── README.md        → this file
 └── LICENSE
 ```
@@ -197,15 +200,17 @@ Each folder is an independent build:
 
 | Component | Build |
 |-----------|-------|
-| `androidserver` | `cd androidserver && ./gradlew assembleDebug` |
-| `androidclient` | `cd androidclient && ./gradlew assembleDebug` |
-| `iosclient` | `open iosclient/Package.swift` in Xcode or `swift build` |
+| `androidserver` | `cd androidserver && ./gradlew assembleRelease` |
+| `androidclient` | `cd androidclient && ./gradlew assembleRelease` |
+| `iosclient` | `cd iosclient && xcodebuild -sdk iphoneos -configuration Release build` |
 | `linuxclient` | `pip install -r linuxclient/requirements.txt && python3 linuxclient/sndcpy_client.py --help` |
 | `windowsclient` | `py -3 windowsclient/sndcpy_client.py --help` |
 
-## Version Roadmap
+## Version History
 
-Every component followed `0.1.0-beta` → `1.0.0-beta` to validate the wire protocol before the 1.0.0 official release.
+SNDCPY is now at the **1.0.0** official release. All components speak the same
+encrypted, envelope-multiplexed v2 wire protocol — mix any client with any
+server 1.0.0 build.
 
 **Server** `androidserver` — the reference implementation:
 
@@ -218,24 +223,23 @@ Every component followed `0.1.0-beta` → `1.0.0-beta` to validate the wire prot
 - `0.7.0-beta` **Input**: AccessibilityService gestures
 - `0.8.0-beta` **Discovery**: mDNS NSD + telemetry
 - `0.9.0-beta` **Audio**: playback capture → AAC-LC
-- `1.0.0-beta` **Polish**: back-pressure, `SET_BITRATE/FPS`, `RuntimeConfig`
+- `1.0.0` **Final**: UDP LAN beacon discovery, back-pressure, `SET_BITRATE/FPS`, `RuntimeConfig`
 
 **Clients** — each tracked the same betas so they all speak v2 at 1.0.0:
 
-- `androidclient` `0.1.0-beta-ANDROIDCLIENT` → `1.0.0-beta-ANDROIDCLIENT`
-- `iosclient` `0.1.0-beta-IOSCLIENT` → `1.0.0-beta-IOSCLIENT`
-- `linuxclient` `0.1.0-beta-LINUXCLIENT` → `1.0.0-beta-LINUXCLIENT`
-- `windowsclient` `0.1.0-beta-WINDOWSCLIENT` → `1.0.0-beta-WINDOWSCLIENT`
-
-At **1.0.0**, all five speak the same encrypted, envelope-multiplexed protocol. Mix any client with any server 1.0.0 build.
+- `androidclient` `0.1.0-beta-ANDROIDCLIENT` → `1.0.0`
+- `iosclient` `0.1.0-beta-IOSCLIENT` → `1.0.0`
+- `linuxclient` `0.1.0-beta-LINUXCLIENT` → `1.0.0`
+- `windowsclient` `0.1.0-beta-WINDOWSCLIENT` → `1.0.0`
 
 ## Resources
 
 - [Server details](androidserver/README.md)
 - [Android client](androidclient/README.md)
 - [iOS client](iosclient/README.md)
-- [Linux client](linuxclient/README.md)
+- [Linux / macOS client](linuxclient/README.md)
 - [Windows client](windowsclient/README.md)
+- [Flatpak](flatpak/README.md)
 - [Releases](https://github.com/TheRealRexo/SNDCPY/releases)
 - Inspired by [scrcpy](https://github.com/Genymobile/scrcpy)
 
