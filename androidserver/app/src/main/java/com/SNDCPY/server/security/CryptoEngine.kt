@@ -65,9 +65,9 @@ object CryptoEngine {
 
     /** Encodes a P-256 public key as X963 raw point (0x04 || x || y). */
     private fun x963Encode(publicKey: PublicKey): ByteArray {
-        val ecKey = java.security.interfaces.ECPublicKey::class.java.cast(publicKey)
-        val x = ecKey.w.x
-        val y = ecKey.w.y
+        val w = publicKey.w
+        val x = w.x
+        val y = w.y
         val buf = ByteArray(1 + 64)
         buf[0] = 0x04
         x.toByteArray().copyOf(32).copyInto(buf, 1, 0, 32)
