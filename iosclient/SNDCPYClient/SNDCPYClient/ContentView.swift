@@ -628,11 +628,41 @@ struct ContentView: View {
             .onDisappear {
                 discovery.stop()
             }
-            .alert("Pair with server", isPresented: $showPairing) {
-                TextField("6-digit code", text: $pairingInput).keyboardType(.numberPad)
-                Button("Pair") { engine.setPairingCode(pairingInput); showPairing = false }
-                Button("Cancel", role: .cancel) { engine.setPairingCode(""); showPairing = false }
-            }
+            .overlay(
+                ZStack {
+                    if showPairing {
+                        Color.black.opacity(0.6)
+                            .ignoresSafeArea()
+                        VStack(spacing: 20) {
+                            Text("Pair with server")
+                                .font(.title)
+                                .foregroundColor(.white)
+                            Text("Enter the 6-digit code shown on the server")
+                                .foregroundColor(.gray)
+                            TextField("6-digit code", text: $pairingInput)
+                                .keyboardType(.numberPad)
+                                .textFieldStyle(.roundedBorder)
+                                .multilineTextAlignment(.center)
+                                .frame(width: 180)
+                            HStack(spacing: 12) {
+                                Button("Cancel") {
+                                    engine.setPairingCode("")
+                                    showPairing = false
+                                }
+                                .buttonStyle(.bordered)
+                                Button("Pair") {
+                                    engine.setPairingCode(pairingInput)
+                                    showPairing = false
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
+                        }
+                        .padding(32)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(16)
+                    }
+                }
+            )
         }
     }
 }
