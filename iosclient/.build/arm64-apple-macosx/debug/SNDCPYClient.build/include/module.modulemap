@@ -1,0 +1,3 @@
+module SNDCPYClient {
+    header "/Users/ahmedelkafas/Documents/codingprojects/SNDCPY/iosclient/.build/arm64-apple-macosx/debug/SNDCPYClient.build/include/SNDCPYClient-Swift.h"
+}

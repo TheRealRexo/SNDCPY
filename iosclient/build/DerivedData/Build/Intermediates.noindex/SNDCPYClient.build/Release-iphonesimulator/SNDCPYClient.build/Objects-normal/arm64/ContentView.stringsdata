@@ -1,0 +1,128 @@
+{
+  "source": "/Users/ahmedelkafas/Documents/codingprojects/SNDCPY/iosclient/SNDCPYClient/SNDCPYClient/ContentView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "SNDCPY",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 492
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pair with server",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 496
+        }
+      },
+      {
+        "comment": "",
+        "key": "This keyboard drives the Android device",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 476
+        }
+      },
+      {
+        "comment": "",
+        "key": "IP",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 445
+        }
+      },
+      {
+        "comment": "",
+        "key": "Port",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 448
+        }
+      },
+      {
+        "comment": "",
+        "key": "Disconnect",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 452
+        }
+      },
+      {
+        "comment": "",
+        "key": "Connect",
+        "location": {
+          "startingColumn": 70,
+          "startingLine": 452
+        }
+      },
+      {
+        "comment": "",
+        "key": "Connecting…",
+        "location": {
+          "startingColumn": 68,
+          "startingLine": 464
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enter IP and Connect",
+        "location": {
+          "startingColumn": 86,
+          "startingLine": 464
+        }
+      },
+      {
+        "comment": "",
+        "key": "Home",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 470
+        }
+      },
+      {
+        "comment": "",
+        "key": "Back",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 471
+        }
+      },
+      {
+        "comment": "",
+        "key": "Recents",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 472
+        }
+      },
+      {
+        "comment": "",
+        "key": "6-digit code",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 497
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pair",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 498
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 499
+        }
+      }
+    ]
+  },
+  "version": 1
+}

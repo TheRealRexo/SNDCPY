@@ -1,0 +1,7 @@
+Target dependency graph (3 targets)
+Target 'AllExcludingTests' in project 'Aggregate'
+➜ Explicit dependency on target 'SNDCPYClient-product' in project 'SNDCPYClient'
+➜ Explicit dependency on target 'SNDCPYClient' in project 'SNDCPYClient'
+Target 'SNDCPYClient-product' in project 'SNDCPYClient'
+➜ Explicit dependency on target 'SNDCPYClient' in project 'SNDCPYClient'
+Target 'SNDCPYClient' in project 'SNDCPYClient' (no dependencies)

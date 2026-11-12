@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/ahmedelkafas/Documents/codingprojects/SNDCPY/iosclient/.build/arm64-apple-macosx/debug/SNDCPYClient.build/master.swiftdeps"
+  },
+  "/Users/ahmedelkafas/Documents/codingprojects/SNDCPY/iosclient/Sources/com/sndcpy/client/Client.swift": {
+    "dependencies": "/Users/ahmedelkafas/Documents/codingprojects/SNDCPY/iosclient/.build/arm64-apple-macosx/debug/SNDCPYClient.build/Client.d",
+    "object": "/Users/ahmedelkafas/Documents/codingprojects/SNDCPY/iosclient/.build/arm64-apple-macosx/debug/SNDCPYClient.build/Client.swift.o",
+    "swiftmodule": "/Users/ahmedelkafas/Documents/codingprojects/SNDCPY/iosclient/.build/arm64-apple-macosx/debug/SNDCPYClient.build/Client~partial.swiftmodule",
+    "swift-dependencies": "/Users/ahmedelkafas/Documents/codingprojects/SNDCPY/iosclient/.build/arm64-apple-macosx/debug/SNDCPYClient.build/Client.swiftdeps",
+    "diagnostics": "/Users/ahmedelkafas/Documents/codingprojects/SNDCPY/iosclient/.build/arm64-apple-macosx/debug/SNDCPYClient.build/Client.dia"
+  }
+}

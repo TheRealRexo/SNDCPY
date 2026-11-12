@@ -1,0 +1,4 @@
+module SNDCPYClient {
+header "SNDCPYClient-Swift.h"
+export *
+}
