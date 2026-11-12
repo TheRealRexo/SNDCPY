@@ -41,7 +41,6 @@ class MainActivity : AppCompatActivity() {
         // Auto-issue the first pairing code on startup so it is visible immediately.
         refreshPairingCode()
 
-        binding.pairingButton.setOnClickListener { refreshPairingCode() }
         binding.refreshPairingButton.setOnClickListener { refreshPairingCode() }
         binding.startCaptureButton.setOnClickListener { requestScreenCapture() }
         binding.stopCaptureButton.setOnClickListener { runtime.stopCapture() }
