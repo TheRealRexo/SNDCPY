@@ -534,6 +534,8 @@ final class SNDCPYEngine: ObservableObject {
     }
 
     func disconnect() {
+        pairingCodeContinuation?.resume(returning: "")
+        pairingCodeContinuation = nil
         readFrames = false
         connection?.cancel()
         connection = nil
