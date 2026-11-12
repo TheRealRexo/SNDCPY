@@ -616,7 +616,7 @@ struct ContentView: View {
             }
             .navigationTitle("SNDCPY")
             .onAppear {
-                engine.onPairingRequired = { showPairing = true }
+                engine.onPairingRequired = { DispatchQueue.main.async { showPairing = true } }
                 discovery.onFound = { srv in
                     if !discoveredServers.contains(where: { $0.ip == srv.ip }) {
                         discoveredServers.append(srv)
