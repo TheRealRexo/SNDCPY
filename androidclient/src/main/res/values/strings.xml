@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">SNDCPY Client</string>
+    <string name="connect">Connect to Server</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_disconnected">Disconnected</string>
+</resources>

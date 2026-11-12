@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=SNDCPY
+GenericName=Android Remote Control
+Comment=Mirror and control Android devices over Wi-Fi
+Exec=sndcpy
+Icon=com.sndcpy.Client
+Terminal=false
+Categories=Network;RemoteAccess;Utility;
+StartupNotify=true
+Keywords=android;remote;control;mirror;scrcpy;
+StartupWMClass=SNDCPY

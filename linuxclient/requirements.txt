@@ -1,0 +1,2 @@
+# Optional for secure mode (ECDH + AES-GCM). Legacy HELLO works without it.
+cryptography>=42.0.0

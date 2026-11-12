@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.sndcpy.Client</id>
+  <name>SNDCPY</name>
+    <summary>Mirror and control Android devices over Wi-Fi</summary>
+  <launchable type="desktop-id">com.sndcpy.Client.desktop</launchable>
+  <developer id="com.github.TheRealRexo">
+    <name>Ahmed Elkafasa</name>
+  </developer>
+  <description>
+    <p>SNDCPY mirrors Android devices (video and audio) over Wi-Fi and allows control with a keyboard and mouse. Inspired by scrcpy, it is built from scratch for low-latency, production-grade remote control on a local network.</p>
+    <p><b>Features:</b></p>
+    <ul>
+      <li>Screen mirroring via H.264 (720p/1080p, 30-60 fps)</li>
+      <li>Audio forwarding (AAC, Android 10+)</li>
+      <li>Remote input: keyboard, mouse, touch gestures</li>
+      <li>Secure pairing with ECDH + AES-256-GCM encryption</li>
+      <li>mDNS/Bonjour discovery (_sndcpy._tcp.)</li>
+      <li>Telemetry (FPS, heap, uptime)</li>
+      <li>Cross-platform: Android, iOS, Linux, Windows</li>
+    </ul>
+    <p>All communication is encrypted with ECDH + AES-256-GCM. Pairing uses one-time 6-digit codes.</p>
+  </description>
+  <project_license>Apache-2.0</project_license>
+  <url type="homepage">https://github.com/TheRealRexo/SNDCPY</url>
+  <url type="bugtracker">https://github.com/TheRealRexo/SNDCPY/issues</url>
+  <url type="help">https://github.com/TheRealRexo/SNDCPY/blob/main/README.md</url>
+  <url type="donate">https://github.com/sponsors/TheRealRexo</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/TheRealRexo/SNDCPY/main/assets/sndcpy-icon-1024.png</image>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="1.0.0" date="2026-08-28">
+      <description>
+        <p>First stable release with GUI-based pairing, cross-platform clients, real-time multi-touch and keyboard control, and per-session ECDH + AES-256-GCM encryption.</p>
+      </description>
+    </release>
+  </releases>
+  <provides>
+    <binary>sndcpy</binary>
+  </provides>
+  <keywords>
+    <keyword>android</keyword>
+    <keyword>remote</keyword>
+    <keyword>control</keyword>
+    <keyword>mirror</keyword>
+    <keyword>scrcpy</keyword>
+    <keyword>remote-desktop</keyword>
+  </keywords>
+  <categories>
+    <category>Network</category>
+    <category>RemoteAccess</category>
+    <category>Utility</category>
+  </categories>
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-cartoon">none</content_attribute>
+    <content_attribute id="violence-fantasy">none</content_attribute>
+    <content_attribute id="violence-realistic">none</content_attribute>
+    <content_attribute id="violence-bloodshed">none</content_attribute>
+    <content_attribute id="sexual-content">none</content_attribute>
+    <content_attribute id="sexual-nudity">none</content_attribute>
+    <content_attribute id="profanity">none</content_attribute>
+    <content_attribute id="drugs-alcohol">none</content_attribute>
+    <content_attribute id="gambling">none</content_attribute>
+  </content_rating>
+</component>

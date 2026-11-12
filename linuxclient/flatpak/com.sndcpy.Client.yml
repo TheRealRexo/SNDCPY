@@ -1,0 +1,46 @@
+# SNDCPY Flatpak Manifest
+# Build: flatpak-builder --repo=repo --force-clean build-dir com.sndcpy.Client.yml
+
+app-id: com.sndcpy.Client
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+command: sndcpy
+finish-args:
+  - --share=network          # Network access for connecting to the Android server
+  - --share=ipc              # IPC for X11
+  - --socket=wayland         # Wayland display
+  - --socket=x11             # X11 fallback
+  - --socket=pulseaudio      # Audio playback
+  - --talk-name=org.freedesktop.portal.Desktop  # File chooser, etc.
+  - --talk-name=org.freedesktop.portal.NetworkMonitor  # Network status
+
+modules:
+  # Python dependencies
+  - name: python3
+    buildsystem: simple
+    build-commands:
+      - /usr/bin/python3 -m ensurepip --upgrade
+      - /usr/bin/pip3 install --no-cache-dir --prefix=${FLATPAK_DEST} cryptography
+
+  # SNDCPY Client application
+  - name: sndcpy-client
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 sndcpy_client.py ${FLATPAK_DEST}/bin/sndcpy
+      - install -Dm644 requirements.txt ${FLATPAK_DEST}/share/sndcpy-client/requirements.txt
+      - install -Dm644 ../assets/sndcpy-icon-256.png ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps/com.sndcpy.Client.png
+      - install -Dm644 com.sndcpy.Client.desktop ${FLATPAK_DEST}/share/applications/com.sndcpy.Client.desktop
+      - install -Dm644 com.sndcpy.Client.appdata.xml ${FLATPAK_DEST}/share/metainfo/com.sndcpy.Client.appdata.xml
+      - /usr/bin/pip3 install --no-cache-dir --prefix=${FLATPAK_DEST} -r requirements.txt
+    sources:
+      - type: file
+        path: ../sndcpy_client.py
+      - type: file
+        path: ../requirements.txt
+      - type: file
+        path: ../assets/sndcpy-icon-256.png
+      - type: file
+        path: com.sndcpy.Client.desktop
+      - type: file
+        path: com.sndcpy.Client.appdata.xml
