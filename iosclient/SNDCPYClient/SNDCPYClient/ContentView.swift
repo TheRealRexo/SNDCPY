@@ -339,9 +339,22 @@ final class SNDCPYEngine: ObservableObject {
     private var readFrames = true
 
     var onPairingRequired: (() -> Void)?
-    private var pairingCode: String?
+    internal var pairingCode: String?
 
     func setPairingCode(_ code: String) { pairingCode = code }
+
+    func sendPairingCode(_ code: String) {
+        guard let conn = connection else { return }
+        conn.send(content: "PAIR \(code)\n".data(using: .utf8), completion: .contentProcessed { [weak self] _ in
+            self?.readTextLine { resp in
+                if resp.trimmingCharacters(in: .whitespaces) == "PAIRED" {
+                    Task { @MainActor in self?.finishConnect() }
+                } else {
+                    Task { @MainActor in self?.state = .failed("Pairing rejected") }
+                }
+            }
+        }
+    }
 
     func connect(host: String, port: UInt16) {
         let conn = NWConnection(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
@@ -405,31 +418,20 @@ final class SNDCPYEngine: ObservableObject {
             serverNonce = Data(base64Encoded: parts[2]) ?? Data()
             deriveSession(serverPublicB64: parts[1])
             onPairingRequired?()
-            waitForCode { [weak self] code in
-                guard let self = self else { return }
-                self.connection?.send(content: "PAIR \(code)\n".data(using: .utf8), completion: .contentProcessed { _ in
-                    self.readTextLine { resp in
-                        if resp.trimmingCharacters(in: .whitespaces) == "PAIRED" {
-                            self.finishConnect()
-                        } else {
-                            self.state = .failed("Pairing rejected")
-                        }
+            Task.detached {
+                var code: String?
+                for _ in 0..<300 {
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                    if let c = await self?.pairingCode, !c.isEmpty {
+                        code = c
+                        break
                     }
-                })
+                }
+                guard let code = code, !code.isEmpty else { return }
+                await self?.sendPairingCode(code)
             }
         default:
             state = .failed(line)
-        }
-    }
-
-    private func waitForCode(_ done: @escaping (String) -> Void) {
-        Task { @MainActor in
-            var attempts = 0
-            while pairingCode == nil && attempts < 300 {
-                try? await Task.sleep(nanoseconds: 100_000_000)
-                attempts += 1
-            }
-            done(pairingCode ?? "")
         }
     }
 
