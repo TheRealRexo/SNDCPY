@@ -345,15 +345,19 @@ final class SNDCPYEngine: ObservableObject {
 
     func sendPairingCode(_ code: String) {
         guard let conn = connection else { return }
-        conn.send(content: "PAIR \(code)\n".data(using: .utf8), completion: .contentProcessed { [weak self] _ in
-            self?.readTextLine { resp in
-                if resp.trimmingCharacters(in: .whitespaces) == "PAIRED" {
-                    Task { @MainActor in self?.finishConnect() }
-                } else {
-                    Task { @MainActor in self?.state = .failed("Pairing rejected") }
+        let data = "PAIR \(code)\n".data(using: .utf8)!
+        conn.send(content: data, completion: .contentProcessed { [weak self] _ in
+            guard let self = self else { return }
+            Task { @MainActor in
+                self.readTextLine { resp in
+                    if resp.trimmingCharacters(in: .whitespaces) == "PAIRED" {
+                        self.finishConnect()
+                    } else {
+                        self.state = .failed("Pairing rejected")
+                    }
                 }
             }
-        }
+        })
     }
 
     func connect(host: String, port: UInt16) {
@@ -418,17 +422,18 @@ final class SNDCPYEngine: ObservableObject {
             serverNonce = Data(base64Encoded: parts[2]) ?? Data()
             deriveSession(serverPublicB64: parts[1])
             onPairingRequired?()
-            Task.detached {
+            Task.detached { [weak self] in
+                guard let self = self else { return }
                 var code: String?
                 for _ in 0..<300 {
                     try? await Task.sleep(nanoseconds: 100_000_000)
-                    if let c = await self?.pairingCode, !c.isEmpty {
+                    if let c = await self.pairingCode, !c.isEmpty {
                         code = c
                         break
                     }
                 }
                 guard let code = code, !code.isEmpty else { return }
-                await self?.sendPairingCode(code)
+                await self.sendPairingCode(code)
             }
         default:
             state = .failed(line)
