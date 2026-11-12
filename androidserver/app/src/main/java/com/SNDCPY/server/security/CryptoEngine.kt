@@ -63,44 +63,29 @@ object CryptoEngine {
         KeyFactory.getInstance(KEY_ALGORITHM)
             .generatePrivate(PKCS8EncodedKeySpec(Base64.getDecoder().decode(encoded)))
 
-    /** Encodes a P-256 public key as X963 raw point (0x04 || x || y). */
+    /** Encodes a P-256 public key as X963 raw point (0x04 || x || y, 65 bytes). */
     private fun x963Encode(publicKey: PublicKey): ByteArray {
-        val ecKey = publicKey as java.security.interfaces.ECPublicKey
-        // Use Java accessor methods to get affine coordinates reliably
-        val xVal = ecKey.getAffineX()
-        val yVal = ecKey.getAffineY()
-        val buf = ByteArray(65) // 1 + 64
-        buf[0] = 0x04.toByte()
-        // Encode x as 32 big-endian bytes at buf[1..32]
-        val xBytes = xVal.toByteArray() // signed big-endian, always non-negative
-        // Pad or trim to exactly 32 bytes
-        if (xBytes.size < 32) {
-            java.util.Arrays.fill(buf, 1, 33, 0.toByte())
-            // Copy xBytes starting at offset (32 - xBytes.size)
-            val copyLen = xBytes.size
-            for (i in 0 until copyLen) {
-                buf[32 - copyLen + i] = xBytes[i]
-            }
-        } else {
-            // Take the last 32 bytes (most significant)
-            for (i in 0 until 32) {
-                buf[1 + i] = xBytes[xBytes.size - 32 + i]
+        // X.509 SubjectPublicKeyInfo for P-256 is ~91 bytes:
+        // SEQUENCE { SEQUENCE { OID, NULL }, BIT STRING { 0x04 || x || y } }
+        // The uncompressed point starts at a known offset in the encoded form.
+        // For P-256, the point is always 65 bytes starting with 0x04.
+        val encoded = publicKey.encoded
+        // Find the 0x04 prefix that marks the start of the uncompressed point
+        // It should be preceded by BIT STRING header (0x03 0x42 0x00)
+        for (i in encoded.indices) {
+            if (encoded[i] == 0x04.toByte()) {
+                // Check if we have 64 more bytes
+                if (i + 64 < encoded.size) {
+                    // Verify this looks like a point (not a coincidence)
+                    // BIT STRING for P-256 is 0x03 0x42 0x00 followed by 65 bytes
+                    if (i >= 3 && encoded[i-3] == 0x03.toByte() && 
+                        encoded[i-2] == 0x42.toByte() && encoded[i-1] == 0x00.toByte()) {
+                        return encoded.copyOfRange(i, i + 65)
+                    }
+                }
             }
         }
-        // Encode y as 32 big-endian bytes at buf[33..64]
-        val yBytes = yVal.toByteArray() // signed big-endian, always non-negative
-        if (yBytes.size < 32) {
-            java.util.Arrays.fill(buf, 33, 65, 0.toByte())
-            val copyLen = yBytes.size
-            for (i in 0 until copyLen) {
-                buf[65 - copyLen + i] = yBytes[i]
-            }
-        } else {
-            for (i in 0 until 32) {
-                buf[33 + i] = yBytes[yBytes.size - 32 + i]
-            }
-        }
-        return buf
+        throw IllegalArgumentException("Could not extract X963 point from public key")
     }
 
     /** Decodes an X963 raw point (0x04 || x || y) into an ECPublicKey. */
@@ -109,9 +94,9 @@ object CryptoEngine {
         // x is at bytes 1..32, y is at bytes 33..64
         val x = BigInteger(1, raw.copyOfRange(1, 33))
         val y = BigInteger(1, raw.copyOfRange(33, 65))
-        val spec = ECGenParameterSpec("prime256v1")
+        val ecSpec = ECGenParameterSpec("prime256v1")
         return KeyFactory.getInstance(KEY_ALGORITHM)
-            .generatePublic(ECPublicKeySpec(ECPoint(x, y), spec))
+            .generatePublic(ECPublicKeySpec(ECPoint(x, y), ecSpec))
     }
 
     /** Stable SHA-256 fingerprint of a public key, uppercase hex. */
