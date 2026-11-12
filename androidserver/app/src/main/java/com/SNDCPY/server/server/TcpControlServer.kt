@@ -145,11 +145,12 @@ class TcpControlServer(
                     writer.println("PAIRING_REQUIRED ${CryptoEngine.encodePublicKey(pairingManager.serverKeyPair.public)} ${CryptoEngine.encodeBytes(serverNonce)}")
 
                     var paired = false
-                    repeat(PAIRING_ATTEMPTS) {
-                        val attempt = reader.readLine()?.trim().orEmpty()
-                        val parts = attempt.split(WHITESPACE_REGEX)
+                    for (attempt in 1..PAIRING_ATTEMPTS) {
+                        val line = reader.readLine()?.trim().orEmpty()
+                        val parts = line.split(WHITESPACE_REGEX)
                         if (parts.size == 2 && parts[0] == "PAIR" && pairingManager.verifyPairingCode(parts[1])) {
                             paired = true
+                            break
                         }
                     }
                     if (!paired) {
