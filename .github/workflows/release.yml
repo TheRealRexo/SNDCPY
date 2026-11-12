@@ -29,22 +29,27 @@ jobs:
 
       - name: Setup Android SDK
         run: |
-          # Use the pre-installed Android SDK tools on the runner
-          SDKMANAGER=$(find /usr/local/lib/android -name sdkmanager -type f 2>/dev/null | head -1)
-          if [ -z "$SDKMANAGER" ]; then
-            echo "::error::No sdkmanager found"
+          # Use the pre-installed Android SDK tools on the GitHub runner
+          SDKROOT=/usr/local/lib/android/sdk
+          if [ ! -d "$SDKROOT" ]; then
+            echo "::error::Android SDK directory not found at $SDKROOT"
             exit 1
           fi
-          SDKROOT=$(dirname $(dirname $SDKMANAGER))
           echo "Found SDK at: $SDKROOT"
           echo "ANDROID_HOME=$SDKROOT" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$SDKROOT" >> $GITHUB_ENV
           echo "$SDKROOT/platform-tools" >> $GITHUB_PATH
+          # Locate the bundled sdkmanager
+          SDKMANAGER=$(find "$SDKROOT" -name sdkmanager -type f 2>/dev/null | head -1)
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::No sdkmanager found under $SDKROOT"
+            exit 1
+          fi
+          echo "Using sdkmanager: $SDKMANAGER"
           # Accept all SDK licenses
           yes | $SDKMANAGER --sdk_root=$SDKROOT --licenses 2>&1 | tail -5
-          # Install required packages (semicolon-separated, not space)
+          # Install required packages (semicolon-separated names)
           $SDKMANAGER --sdk_root=$SDKROOT --install \
-            "cmdline-tools;latest" \
             "platform-tools" \
             "platforms;34" \
             "platforms;36" \

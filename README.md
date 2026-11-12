@@ -13,6 +13,7 @@ SNDCPY mirrors Android devices (video and audio) over Wi-Fi and allows control w
 [![Android Server](https://img.shields.io/badge/Android%20Server-1.0.0-brightgreen?style=for-the-badge&logo=android)](androidserver/)&nbsp;
 [![Android Client](https://img.shields.io/badge/Android%20Client-1.0.0-blue?style=for-the-badge&logo=android)](androidclient/)&nbsp;
 [![iOS Client](https://img.shields.io/badge/iOS%20Client-1.0.0-black?style=for-the-badge&logo=apple)](iosclient/)&nbsp;
+[![macOS Client](https://img.shields.io/badge/macOS%20Client-1.0.0-black?style=for-the-badge&logo=apple)](linuxclient/)&nbsp;
 [![Linux Client](https://img.shields.io/badge/Linux%20Client-1.0.0-orange?style=for-the-badge&logo=linux)](linuxclient/)&nbsp;
 [![Windows Client](https://img.shields.io/badge/Windows%20Client-1.0.0-blue?style=for-the-badge&logo=windows)](windowsclient/)&nbsp;
 
@@ -41,13 +42,15 @@ Its features include:
 ```bash
 # Build
 cd androidserver
-./gradlew assembleDebug
+./gradlew assembleRelease
 
 # Install (minSdk 26)
-adb install app/build/outputs/apk/debug/app-debug.apk
+adb install app/build/outputs/apk/release/app-release.apk
 ```
 
 Open the app → **Issue pairing code** → **Start screen share** → note the IP.
+
+> The server is also auto-discoverable on the LAN via **UDP beacon** (port `27184`) and **mDNS** (`_sndcpy._tcp.`). Most clients can find it with `--discover` instead of typing an IP.
 
 ### 2. Connect a client
 
@@ -60,13 +63,25 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 # Enter the server IP in the app and tap Connect
 ```
 
-**iOS / macOS**
+**iOS**
 
 ```swift
 // Swift Package
 let client = SNDCPYClient(host: "192.168.1.42")
 client.connect()
 // or: open iosclient/Package.swift in Xcode and Run
+```
+
+**macOS**
+
+```bash
+# Apple Silicon
+unzip SNDCPY-macos-1.0.0-arm64.zip
+./SNDCPY-macos-arm64 --host 192.168.1.42
+
+# Intel
+unzip SNDCPY-macos-1.0.0-x86_64.zip
+./SNDCPY-macos-x86_64 --host 192.168.1.42
 ```
 
 **Linux**
@@ -99,9 +114,10 @@ On some devices (notably Xiaomi) you may need to enable **USB debugging (Securit
 
 - [Android Server](androidserver/) — APK from Releases or `assembleDebug`
 - [Android Client](androidclient/) — APK from Releases or `assembleDebug`
-- [iOS Client](iosclient/) — Swift Package, build in Xcode
-- [Linux Client](linuxclient/) — `sndcpy_client.py`
-- [Windows Client](windowsclient/) — `sndcpy_client.py`
+- [iOS Client](iosclient/) — Unsigned device IPA for iPhone/iPad, built in Xcode
+- [macOS Client](linuxclient/) — Standalone binary for Apple Silicon (`SNDCPY-macos-1.0.0-arm64.zip`) and Intel (`SNDCPY-macos-1.0.0-x86_64.zip`), built with PyInstaller
+- [Linux Client](linuxclient/) — `sndcpy_client.py` + `.deb`, `.AppImage`, `.rpm` packages
+- [Windows Client](windowsclient/) — `sndcpy_client.py` + `.exe` installer
 
 Prebuilt `1.0.0` artifacts are on the [Releases](https://github.com/TheRealRexo/SNDCPY/releases) page.
 
