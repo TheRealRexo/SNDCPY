@@ -535,6 +535,7 @@ struct ContentView: View {
     @State private var lastKeyboard = ""
     @State private var showPairing = false
     @State private var pairingInput = ""
+    @State private var showPairingBox = false
     @State private var discoveryStatus = "Searching…"
     @State private var discoveredServers: [DiscoveryObserver.Discovered] = []
 
@@ -582,6 +583,32 @@ struct ContentView: View {
                     .font(.caption)
                     .foregroundColor(.gray)
 
+                if showPairingBox {
+                    VStack(spacing: 8) {
+                        Text("Enter the 6-digit code shown on the server")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        HStack(spacing: 8) {
+                            TextField("6-digit code", text: $pairingInput)
+                                .keyboardType(.numberPad)
+                                .textFieldStyle(.roundedBorder)
+                                .multilineTextAlignment(.center)
+                                .frame(width: 180)
+                            Button("Pair") {
+                                engine.setPairingCode(pairingInput)
+                                showPairingBox = false
+                            }
+                            .buttonStyle(.borderedProminent)
+                            Button("Cancel") {
+                                engine.setPairingCode("")
+                                showPairingBox = false
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+
                 ZStack {
                     H264View(sink: engine.sink)
                     TouchSurface(engine: engine)
@@ -616,7 +643,7 @@ struct ContentView: View {
             }
             .navigationTitle("SNDCPY")
             .onAppear {
-                engine.onPairingRequired = { DispatchQueue.main.async { showPairing = true } }
+                engine.onPairingRequired = { DispatchQueue.main.async { showPairingBox = true } }
                 discovery.onFound = { srv in
                     if !discoveredServers.contains(where: { $0.ip == srv.ip }) {
                         discoveredServers.append(srv)
@@ -628,41 +655,6 @@ struct ContentView: View {
             .onDisappear {
                 discovery.stop()
             }
-            .overlay(
-                ZStack {
-                    if showPairing {
-                        Color.black.opacity(0.6)
-                            .ignoresSafeArea()
-                        VStack(spacing: 20) {
-                            Text("Pair with server")
-                                .font(.title)
-                                .foregroundColor(.white)
-                            Text("Enter the 6-digit code shown on the server")
-                                .foregroundColor(.gray)
-                            TextField("6-digit code", text: $pairingInput)
-                                .keyboardType(.numberPad)
-                                .textFieldStyle(.roundedBorder)
-                                .multilineTextAlignment(.center)
-                                .frame(width: 180)
-                            HStack(spacing: 12) {
-                                Button("Cancel") {
-                                    engine.setPairingCode("")
-                                    showPairing = false
-                                }
-                                .buttonStyle(.bordered)
-                                Button("Pair") {
-                                    engine.setPairingCode(pairingInput)
-                                    showPairing = false
-                                }
-                                .buttonStyle(.borderedProminent)
-                            }
-                        }
-                        .padding(32)
-                        .background(Color(.systemBackground))
-                        .cornerRadius(16)
-                    }
-                }
-            )
         }
     }
 }
