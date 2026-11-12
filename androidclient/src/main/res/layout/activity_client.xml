@@ -22,7 +22,7 @@
             android:hint="6-digit pairing code"
             android:inputType="number"
             android:textAlignment="center"
-            android:visibility="gone" />
+            android:visibility="visible" />
 
         <Button
             android:id="@+id/sendPairingCodeButton"
@@ -30,7 +30,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="Send Code"
-            android:visibility="gone" />
+            android:visibility="visible" />
 
     </LinearLayout>
 
