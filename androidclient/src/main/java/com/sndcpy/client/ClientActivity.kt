@@ -51,14 +51,17 @@ class ClientActivity : AppCompatActivity() {
 
         // Touch surface → encrypted control commands.
         touchSurfaceView.listener = object : TouchSurfaceView.Listener {
-            override fun onPointerDown(pointerId: Int, x: Float, y: Float) =
+            override fun onPointerDown(pointerId: Int, x: Float, y: Float) {
                 client?.sendControl("POINTER_DOWN $pointerId $x $y")
+            }
 
-            override fun onPointerMove(pointerId: Int, x: Float, y: Float) =
+            override fun onPointerMove(pointerId: Int, x: Float, y: Float) {
                 client?.sendControl("POINTER_MOVE $pointerId $x $y")
+            }
 
-            override fun onPointerUp(pointerId: Int) =
+            override fun onPointerUp(pointerId: Int) {
                 client?.sendControl("POINTER_UP $pointerId")
+            }
         }
 
         connectButton.setOnClickListener { startConnect() }
@@ -126,19 +129,17 @@ class ClientActivity : AppCompatActivity() {
     }
 
     private fun showPairingDialog() {
-        val edit = EditText(this).apply {
-            hint = "6-digit pairing code"
-            inputType = android.text.InputType.TYPE_NUMBER
+        val dialog = Dialog(this)
+        dialog.setContentView(R.layout.dialog_pairing)
+        dialog.setTitle("Pair with server")
+        val pairingEdit = dialog.findViewById<EditText>(R.id.pairingEdit)
+        val pairButton = dialog.findViewById<Button>(R.id.pairButton)
+        pairButton.setOnClickListener {
+            val code = pairingEdit.text.toString().trim()
+            client?.submitPairingCode(code)
+            dialog.dismiss()
         }
-        val dialog = Dialog(this).apply {
-            setTitle("Pair with server")
-            setMessage("Enter the 6-digit code shown on the server")
-            setContentView(edit)
-            setButton(Button.POSITIVE, "Pair") { _, _ ->
-                client?.submitPairingCode(edit.text.toString().trim())
-            }
-            setOnCancelListener { client?.submitPairingCode("") }
-        }
+        dialog.setOnCancelListener { client?.submitPairingCode("") }
         dialog.show()
     }
 

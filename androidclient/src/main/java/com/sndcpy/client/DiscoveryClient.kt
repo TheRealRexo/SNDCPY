@@ -40,7 +40,7 @@ class DiscoveryClient {
                     socket = DatagramSocket(null).apply {
                         reuseAddress = true
                         bind(InetSocketAddress(DISCOVERY_PORT))
-                        soTimeout = SOCKET_TIMEOUT_MS)
+                        soTimeout = SOCKET_TIMEOUT_MS
                     }
                     val buf = ByteArray(512)
                     while (running) {
