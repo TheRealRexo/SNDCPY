@@ -1,166 +1,127 @@
-# SNDCPY 1.0.0 — Official Release
+# SNDCPY v1.0.0 — Official Release
 
-> The first production-ready release of SNDCPY with exactly 3 pairing methods, light/dark themes, Android server icon, and APK self-update — all built locally.
+> Production-ready screen mirroring for Android — secure, low-latency, multi-platform.
 
 ## What's New
 
-This release introduces **exactly 3 pairing methods** across all platforms, plus numerous quality-of-life improvements:
+### Exactly 3 Pairing Methods (selectable per-client)
 
-### Pairing Methods (v1.0.0)
-
-SNDCPY now supports exactly **3 pairing methods**, selectable from the client UI:
-
-| Method | Platforms | Description |
+| Method | Platforms | How it works |
 |--------|-----------|-------------|
-| **Code** | All platforms (Android, iOS, macOS, Linux, Windows) | 6-digit code entered via alert dialog when connecting (reverted from inline text box) |
-| **Bluetooth** | All platforms | Mutual confirmation — both sides must have matching 6-digit codes (like Bluetooth pairing) |
-| **USB** | Desktop only (macOS, Linux, Windows) | USB cable connection — no code needed, just connect via cable |
+| **Code** | All platforms | Enter a 6-digit pairing code when connecting |
+| **Bluetooth** | All platforms | Mutual confirmation — both sides display and confirm the same 6-digit code |
+| **USB** | Desktop only (macOS, Linux, Windows) | No code needed — plug in via USB cable |
 
-> **iOS**: USB pairing method is filtered out (desktop only). Bluetooth and Code methods are available.
+> **iOS**: USB method is filtered out. Code and Bluetooth are available.
 
-### Bug Fixes
+### Security Hardening
 
-- **Crypto bug fixes**: ECPublicKey NameError resolved (EllipticCurvePublicKey used correctly); salt order fixed to `clientNonce + serverNonce` (canonical X963 + HKDF-SHA256); `_read_loop` moved to background thread to avoid blocking GUI
-- **Android server**: `PAIR PROMPT` branch reordered so prompt pairing is reachable (was previously swallowed by first `PAIR` branch)
-- **Android server icon**: Added `android:icon="@mipmap/ic_launcher"` to manifest; icons copied to all mipmap density directories from `assets/sndcpy-icon-*.png`
-- **iOS Liquid Glass GUI**: Rewritten `ContentView.swift` with 3-method selector, alert-based code entry, mutual confirmation for Bluetooth, USB filtered out, and glass-style visual design
+- **Approval-before-pairing-code flow** on the Android server: an incoming pairing request is rejected until the server user explicitly taps "Allow". The pairing code is never shown before approval.
+- **Dependency pins** across both Android modules override vulnerable transitive versions: Netty 4.1.115, protobuf 3.25.5, Guava 33.3.1, jose4j 0.9.6, commons-io 2.16.1, xerces 2.12.2, JDOM 2.0.7.1. (All CVEs previously reported by Dependabot.)
+- Wire protocol unchanged: ECDH P-256 + HKDF-SHA256 → AES-256-GCM per-session encryption.
 
-### New Features
+### Theme Selector
 
-- **Light/dark themes**: macOS QPalette theme switching; Android Material3.DayNight; iOS dark mode preferred
-- **APK self-update mechanism**: File picker → install from locally downloaded APKs (both server and client)
-- **Android client 3-method UI**: Complete rewrite of `ClientActivity.kt` and `activity_client.xml` with methodCodeBtn, methodBluetoothBtn, methodUsbBtn selector
+- macOS / Linux clients: Light / Dark / System theme picker (remembered between sessions; switching system theme after selection still applies).
+- Android server: follows system `Material3.DayNight` theme.
+- iOS client: dark mode preferred (`preferredColorScheme(.dark)`).
 
-### Components
+### Android Server
 
-| Component | Version | Artifact |
-|-----------|---------|----------|
-| **Android Server** | 1.0.0 | `SNDCPY-Server-1.0.0.apk` |
-| **Android Client** | 1.0.0 | `SNDCPY-Client-1.0.0.apk` |
-| **iOS Client** | 1.0.0 | `SNDCPY-iOS-1.0.0.ipa` |
-| **Linux Client** | 1.0.0 | `sndcpy-client_1.0.0_all.deb`, `sndcpy-client-1.0.0-1.noarch.rpm`, `SNDCPY-1.0.0-x86_64.AppImage` |
-| **Windows Client** | 1.0.0 | `SNDCPY-1.0.0-portable.zip`, `SNDCPY-1.0.0-setup.exe`, `SNDCPY-1.0.0.exe` |
-
-## Key Features
-
-### Server (Android)
-
-- **Video**: MediaProjection → H.264 @ 720p/30fps/4Mbps (configurable)
-- **Audio**: Playback capture → AAC-LC 128kbps (Android 10+)
-- **Input**: AccessibilityService gestures (tap, swipe, scroll, HOME/BACK/RECENTS, keycodes)
-- **Security**: ECDH P-256 + HKDF → AES-256-GCM, one-time pairing codes (3 methods)
-- **Discovery**: mDNS/Bonjour `_sndcpy._tcp.` + NSD
-- **Telemetry**: 5s JSON snapshots (fps, heap, sessions, uptime)
-
-### Clients
-
-All clients speak **wire protocol v2**:
-
-- `HELLO SNDCPY` handshake → ECDH + AES-256-GCM encryption
-- Binary envelope multiplexing: control (0x01), video (0x02), audio (0x03), telemetry (0x04)
-- Commands: `TAP`, `SWIPE`, `SCROLL`, `HOME`, `BACK`, `RECENTS`, `KEY:`, `SET_BITRATE`, `SET_FPS`, `GET_CONFIG`, `PING`
+- **Launcher icon** restored (`roundIcon` + `ic_launcher`).
+- **Self-update from APK**: File Picker → install locally-picked APK without ADB.
+- **Approval-before-pairing** dialog surfaces when an unknown device tries to connect.
+- Minimum SDK 26 (Android 8.0), target SDK 34.
 
 ### Android Client
 
-- Kotlin + NWConnection equivalent
-- **3-method pairing selector** (Code/Bluetooth/USB)
-- Pairing code entry UI (alert for Code method)
-- Real-time server message log
-- Bluetooth mutual confirmation flow
+- 3-method pairing selector (Code / Bluetooth / USB buttons with visual highlight).
+- Auto-discovery over LAN UDP beacon (`port 27184`) and mDNS (`_sndcpy._tcp.`).
+- Touch surface with pointer events + keyboard passthrough.
 
-### iOS / macOS Client
+### macOS Client
 
-- Swift + Network.framework (NWConnection)
-- **Liquid Glass styling** with 3-method pairing selector
-- Code method: `QInputDialog` alert entry
-- Bluetooth method: mutual confirm code entry
-- USB method: filtered out on iOS
+- PyInstaller `.app` bundle (`SNDCPY.app`) built for Apple Silicon.
+- Light/Dark/System theme support with remembered selection.
+- Qt6 font warnings eliminated (`Monaco` on macOS, `DejaVu Sans Mono` on Linux).
 
-### Linux Client
+## Assets
 
-- Python 3.10+ reference implementation
-- .deb (Debian/Ubuntu), .rpm (Fedora/RHEL), .AppImage (universal)
-- Interactive command shell
+| Asset | Platform | Notes |
+|-------|----------|-------|
+| `SNDCPY-Server-v1.0.0.apk` | Android (ARM) | Server + self-update |
+| `SNDCPY-Client-v1.0.0.apk` | Android (ARM) | LAN discovery + 3-method pairing |
+| `SNDCPY-macos-v1.0.0-arm64.zip` | macOS (Apple Silicon) | Standalone `.app` bundle |
+| `SNDCPY-v1.0.0-arm64.dmg` | macOS (Apple Silicon) | Disk image installer |
+| `SNDCPY-v1.0.0-arm64.pkg` | macOS (Apple Silicon) | Installer package |
 
-### Windows Client
-
-- Portable zip (no install)
-- Standalone .exe via PyInstaller
-
-## Wire Protocol (v2)
-
-```
-TCP :27183
-  HELLO SNDCPY <clientPubKey> <clientNonce>
-    ├─ paired  → SECURE <serverPubKey> <serverNonce>
-    └─ new     → PAIRING_REQUIRED … → PAIR <code> → PAIRED
-  ── ECDH + HKDF → AES-256-GCM session ──
-encrypted frames [u32 len][12B IV][ciphertext]
-  plaintext envelope [u8 channel][i64 pts µs][payload]
-       0x01 control  0x02 video-H264  0x03 audio-AAC  0x04 telemetry
-```
+> **Note:** Intel macOS builds, Linux `.deb/.rpm/AppImage`, and Windows `.exe`/MSI require their respective build machines and are not included in this local release.
 
 ## Installation
 
 ### Android Server
 
 ```bash
-adb install SNDCPY-Server-1.0.0.apk
-# Open app → Issue pairing code → Start screen share
+adb install SNDCPY-Server-v1.0.0.apk
+# Open app → Allow pairing request → Start screen share → note the IP
 ```
 
 ### Android Client
 
 ```bash
-adb install SNDCPY-Client-1.0.0.apk
+adb install SNDCPY-Client-v1.0.0.apk
+# Enter the server IP and tap Connect
 ```
 
-### iOS
+### macOS
 
 ```bash
-# Build from source
-open iosclient/SNDCPYClient.xcodeproj
-# Or install IPA via TestFlight / Xcode
+unzip SNDCPY-macos-v1.0.0-arm64.zip -d ~/Desktop
+open ~/Desktop/SNDCPY.app --args --host 192.168.1.42
 ```
 
-### Linux
+Or install from the DMG / PKG:
 
 ```bash
-# Debian/Ubuntu
-sudo dpkg -i sndcpy-client_1.0.0_all.deb
-# Fedora/RHEL
-sudo rpm -i sndcpy-client-1.0.0-1.noarch.rpm
-# Universal
-chmod +x SNDCPY-1.0.0-x86_64.AppImage && ./SNDCPY-1.0.0-x86_64.AppImage --host 192.168.1.42
+sudo installer -pkg SNDCPY-v1.0.0-arm64.pkg -target /
+# or: open SNDCPY-v1.0.0-arm64.dmg and drag into Applications
 ```
 
-### Windows
+## Quick API Reference
 
-```powershell
-# Portable
-unzip SNDCPY-1.0.0-portable.zip
-SNDCPY.bat --host 192.168.1.42
+```
+TCP :27183
+  HELLO SNDCPY <cKey> <cNonce>
+    ├─ paired  → SECURE <sKey> <sNonce>
+    └─ new     → PAIRING_REQUIRED … → APPROVED → PAIR <code> → PAIRED
+  ── ECDH + HKDF → AES-256-GCM session ──
+encrypted frames [u32 len][12B IV][ciphertext]
+  plaintext envelope [u8 channel][i64 pts µs][payload]
+        0x01 control  0x02 video-H264  0x03 audio-AAC  0x04 telemetry
+```
 
-# Installer
-SNDCPY-1.0.0-setup.exe
+Common commands (sent as control envelopes):
 
-# Standalone exe
-SNDCPY-1.0.0.exe --host 192.168.1.42
+```
+TAP x y           SWIPE x1 y1 x2 y2 duration_ms
+SCROLL UP|DOWN    HOME   BACK   RECENTS
+KEY:<keycode>     SET_BITRATE bps
+SET_FPS fps       GET_CONFIG   PING
 ```
 
 ## Known Issues
 
-- iOS build requires Apple Developer account for device deployment (simulator works without)
-- Windows MSI requires Inno Setup on build machine (handled in CI)
-- Linux .deb/.rpm require `dpkg-dev`/`rpmbuild` (handled in CI)
-- Audio on Android requires API 29+ (gracefully skipped on older)
-- USB pairing method available on desktop (macOS, Linux, Windows) only; filtered out on iOS
+- **Intel macOS**: no prebuilt binary provided (build machine required).
+- **Linux / Windows**: Python CLI clients available; GUI deb/rpm/AppImage/.exe builders need their respective CI machines.
+- **Audio forwarding**: requires Android 10+ (API 29+); skipped gracefully on older devices.
+- **Xiaomi devices**: enable "USB debugging (Security Settings)" under Developer options, then reboot.
+- **iOS client**: unsigned device IPA requires Xcode; simulator builds work immediately.
 
 ## Links
 
 - **Repository**: https://github.com/TheRealRexo/SNDCPY
 - **Issues**: https://github.com/TheRealRexo/SNDCPY/issues
-- **Documentation**: androidserver/README.md
+- **Protocol spec**: PROTOCOL.md
 
 ---
 

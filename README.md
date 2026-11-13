@@ -12,7 +12,7 @@ SNDCPY mirrors Android devices (video and audio) over Wi-Fi and allows control w
 [![Android Server](https://img.shields.io/badge/Android%20Server-1.0.0-brightgreen?style=for-the-badge&logo=android)](androidserver/)&nbsp;
 [![Android Client](https://img.shields.io/badge/Android%20Client-1.0.0-blue?style=for-the-badge&logo=android)](androidclient/)&nbsp;
 [![iOS Client](https://img.shields.io/badge/iOS%20Client-1.0.0-black?style=for-the-badge&logo=apple)](iosclient/)&nbsp;
-[![macOS Client](https://img.shields.io/badge/macOS%20Client-1.0.0-black?style=for-the-badge&logo=apple)](linuxclient/)&nbsp;
+[![macOS Client](https://img.shields.io/badge/macOS%20Client-1.0.0-black?style=for-the-badge&logo=apple)](macosclient/)&nbsp;
 [![Linux Client](https://img.shields.io/badge/Linux%20Client-1.0.0-orange?style=for-the-badge&logo=linux)](linuxclient/)&nbsp;
 [![Windows Client](https://img.shields.io/badge/Windows%20Client-1.0.0-blue?style=for-the-badge&logo=windows)](windowsclient/)&nbsp;
 
@@ -76,13 +76,9 @@ client.connect()
 **macOS**
 
 ```bash
-# Apple Silicon
-unzip SNDCPY-macos-1.0.0-arm64.zip
-./SNDCPY-macos-arm64 --host 192.168.1.42
-
-# Intel
-unzip SNDCPY-macos-1.0.0-x86_64.zip
-./SNDCPY-macos-x86_64 --host 192.168.1.42
+# Download SNDCPY-macos-v1.0.0-arm64.zip from Releases, then:
+unzip SNDCPY-macos-v1.0.0-arm64.zip -d /tmp
+open /tmp/SNDCPY.app --args --host 192.168.1.42
 ```
 
 **Linux**
@@ -113,7 +109,7 @@ On some devices (notably Xiaomi) you may need to enable **USB debugging (Securit
 - [Android Server](androidserver/) — APK from Releases or `assembleRelease`
 - [Android Client](androidclient/) — APK from Releases or `assembleRelease`
 - [iOS Client](iosclient/) — Unsigned device IPA for iPhone/iPad, built in Xcode
-- [macOS Client](linuxclient/) — Standalone binary for Apple Silicon (`SNDCPY-macos-1.0.0-arm64.zip`) and Intel (`SNDCPY-macos-1.0.0-x86_64.zip`), built with PyInstaller
+- [macOS Client](macosclient/) — Standalone `.app` bundle (`SNDCPY-macos-v1.0.0-arm64.zip`) built with PyInstaller
 - [Linux Client](linuxclient/) — `sndcpy_client.py` + `.deb`, `.AppImage`, `.rpm` packages
 - [Windows Client](windowsclient/) — `sndcpy_client.py` + `.exe` installer
 - [Flatpak](flatpak/) — Flathub-ready manifest (`flatpak install flatpak/flatpakref/SNDCPY.flatpakref`)
@@ -186,6 +182,7 @@ SNDCPY/
 ├── androidserver/   → Android server (Kotlin, MediaProjection, MediaCodec)
 ├── androidclient/   → Android client (Kotlin, NW + handshake)
 ├── iosclient/       → iOS client (Swift, UIKit, Network.framework)
+├── macosclient/     → macOS client (Python + PyQt6, PyInstaller bundle)
 ├── linuxclient/     → Cross-platform Python client (also builds macOS binaries)
 ├── windowsclient/   → Windows client (Python, sockets)
 ├── flatpak/         → Flatpak manifest for Flathub
@@ -197,11 +194,12 @@ Each folder is an independent build:
 
 | Component | Build |
 |-----------|-------|
-| `androidserver` | `cd androidserver && ./gradlew assembleRelease` |
-| `androidclient` | `cd androidclient && ./gradlew assembleRelease` |
+| `androidserver` | `cd androidserver && ./gradlew assembleDebug` |
+| `androidclient` | `cd androidclient && ./gradlew assembleDebug` |
 | `iosclient` | `cd iosclient && xcodebuild -sdk iphoneos -configuration Release build` |
-| `linuxclient` | `pip install -r linuxclient/requirements.txt && python3 linuxclient/sndcpy_client.py --help` |
-| `windowsclient` | `py -3 windowsclient/sndcpy_client.py --help` |
+| `macosclient` | `cd macosclient && pyinstaller SNDCPY-macos-arm64.spec` |
+| `linuxclient` | `pip install -r linuxclient/requirements.txt && python3 linuxclient/sndcpy_gui_client.py --host 192.168.1.42` |
+| `windowsclient` | `py -3 windowsclient/sndcpy_gui_client.py --host 192.168.1.42` |
 
 ## Pairing Methods (v1.0.0)
 
@@ -226,7 +224,7 @@ SNDCPY now supports exactly **3 pairing methods**, selectable from the client UI
 - [Server details](androidserver/README.md)
 - [Android client](androidclient/README.md)
 - [iOS client](iosclient/README.md)
-- [Linux / macOS client](linuxclient/README.md)
+- [macOS / Linux client](linuxclient/README.md)
 - [Windows client](windowsclient/README.md)
 - [Flatpak](flatpak/README.md)
 - [Releases](https://github.com/TheRealRexo/SNDCPY/releases)
