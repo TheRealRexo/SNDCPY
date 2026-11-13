@@ -56,14 +56,18 @@ def hmac_sha256(key: bytes, data: bytes) -> bytes:
 
 
 def generate_ec_keypair():
-    """Generate an ECDH P-256 key pair."""
+    """Generate an ECDH P-256 key pair and return X963-encoded public key."""
     if not CRYPTO_AVAILABLE:
         raise RuntimeError("cryptography not available")
-    private_key = SECP256R1.generate_private_key()
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives.asymmetric.ec import SECP256R1
+    private_key = ec.generate_private_key(SECP256R1())
     public_key = private_key.public_key()
-    # Return SubjectPublicKeyInfo DER, base64-encoded (no wrapping)
-    der = public_key.public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)
-    return base64.b64encode(der).decode(), private_key
+    # Encode as X963 (0x04 || x || y, 65 bytes), base64-encoded
+    x = public_key.public_numbers().x.to_bytes(32, 'big')
+    y = public_key.public_numbers().y.to_bytes(32, 'big')
+    x963 = b'\x04' + x + y
+    return base64.b64encode(x963).decode(), private_key
 
 
 def encode_public_key_b64(public_key_pem: str) -> str:
@@ -253,8 +257,8 @@ def main():
     if CRYPTO_AVAILABLE and status == "SECURE":
         try:
             server_public_der = decode_bytes_b64(server_public_b64)
-            from cryptography.hazmat.primitives.asymmetric.ec import ECPublicKey
-            server_key = ECPublicKey.from_encoded_point(SECP256R1(), server_public_der)
+            from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
+            server_key = EllipticCurvePublicKey.from_encoded_point(SECP256R1(), server_public_der)
             client_key = client_private.public_key()
             # ECDH shared secret
             from cryptography.hazmat.primitives.kdf.hkdf import HKDF

@@ -46,6 +46,7 @@ class TcpControlServer(
         fun onSessionEnded(session: Session)
         fun onCommandReceived(session: Session, command: String): Boolean
         fun onPairingCodeIssued(code: String)
+        fun onPromptPairingRequested(fingerprint: String)
         fun onStatus(status: String)
     }
 
@@ -145,23 +146,54 @@ class TcpControlServer(
                     writer.println("PAIRING_REQUIRED ${CryptoEngine.encodePublicKey(pairingManager.serverKeyPair.public)} ${CryptoEngine.encodeBytes(serverNonce)}")
 
                     var paired = false
+                    var promptFingerprint: String? = null
                     for (attempt in 1..PAIRING_ATTEMPTS) {
                         val line = reader.readLine()?.trim().orEmpty()
                         val parts = line.split(WHITESPACE_REGEX)
-                        if (parts.size == 2 && parts[0] == "PAIR" && pairingManager.verifyPairingCode(parts[1])) {
-                            paired = true
-                            break
+                        if (parts.size == 2 && parts[0] == "PAIR") {
+                            // Classic pairing with a 6-digit code.
+                            if (pairingManager.verifyPairingCode(parts[1])) {
+                                paired = true
+                                break
+                            }
+                        } else if (parts.size == 2 && parts[0] == "PAIR" && parts[1] == "PROMPT") {
+                            // Bluetooth-style prompt pairing: both sides must confirm.
+                            if (pairingManager.requestPromptPairing(clientFingerprint)) {
+                                listener.onPromptPairingRequested(clientFingerprint)
+                                val approved = pairingManager.waitForPromptDecision()
+                                if (!approved) {
+                                    writer.println("REJECTED")
+                                    listener.onStatus("Prompt pairing rejected for $remoteAddress")
+                                    return
+                                }
+                                writer.println("PROMPT_APPROVED")
+                                // Wait for the client-side confirmation.
+                                val confirm = reader.readLine()?.trim().orEmpty()
+                                val confirmParts = confirm.split(WHITESPACE_REGEX)
+                                if (confirmParts.size == 2 && confirmParts[0] == "PAIR" && confirmParts[1] == "CONFIRM") {
+                                    promptFingerprint = clientFingerprint
+                                    break
+                                }
+                                writer.println("REJECTED")
+                                listener.onStatus("Prompt pairing not confirmed by client ($remoteAddress)")
+                                return
+                            }
                         }
                     }
-                    if (!paired) {
+                    if (!paired && promptFingerprint == null) {
                         writer.println("REJECTED")
                         listener.onStatus("Pairing failed for $remoteAddress ($clientFingerprint)")
                         return
                     }
-
-                    pairingManager.addPairedDevice(clientFingerprint, remoteAddress)
-                    writer.println("PAIRED")
-                    listener.onStatus("Paired new device $remoteAddress (${clientFingerprint.take(12)}…)")
+                    if (promptFingerprint != null) {
+                        pairingManager.completePromptPairing(promptFingerprint)
+                        writer.println("PAIRED")
+                        listener.onStatus("Prompt-paired new device $remoteAddress (${promptFingerprint.take(12)}…)")
+                    } else {
+                        pairingManager.addPairedDevice(clientFingerprint, remoteAddress)
+                        writer.println("PAIRED")
+                        listener.onStatus("Paired new device $remoteAddress (${clientFingerprint.take(12)}…)")
+                    }
                 } else {
                     writer.println("SECURE ${CryptoEngine.encodePublicKey(pairingManager.serverKeyPair.public)} ${CryptoEngine.encodeBytes(serverNonce)}")
                 }

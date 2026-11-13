@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit
  *   pairing code shown on the server screen. The client key fingerprint
  *   is then persisted and trusted for all future sessions.
  * - Unpaired fingerprints are rejected before any secure channel opens.
+ * - Alternative: prompt-based pairing where both sides confirm (like Bluetooth).
  */
 class PairingManager(context: Context) {
 
@@ -31,6 +32,17 @@ class PairingManager(context: Context) {
 
     @Volatile
     private var pendingPairingExpiresAtMs: Long = 0L
+
+    /** Pending fingerprint for prompt-based pairing approval. */
+    @Volatile
+    private var pendingPromptFingerprint: String? = null
+
+    @Volatile
+    private var pendingPromptExpiresAtMs: Long = 0L
+
+    /** UI decision for the in-flight prompt pairing (true = approve, false = reject). */
+    private val promptDecision = java.util.concurrent.atomic.AtomicBoolean(false)
+    private var promptDecided = false
 
     val serverKeyPair: KeyPair
         get() {
@@ -84,6 +96,90 @@ class PairingManager(context: Context) {
         }
     }
 
+    /**
+     * Initiates prompt-based pairing with a client fingerprint.
+     * Returns true if the prompt was initiated, false if already paired or expired.
+     */
+    fun requestPromptPairing(fingerprint: String): Boolean {
+        synchronized(lock) {
+            if (pairedFingerprints().contains(fingerprint)) {
+                return false  // Already paired
+            }
+            pendingPromptFingerprint = fingerprint
+            pendingPromptExpiresAtMs = System.currentTimeMillis() +
+                TimeUnit.MINUTES.toMillis(PAIRING_PROMPT_TTL_MINUTES)
+            promptDecided = false
+            promptDecision.set(false)
+            return true
+        }
+    }
+
+    /** Server user approves the pending prompt pairing. */
+    fun approvePromptPairing(): Boolean {
+        synchronized(lock) {
+            if (pendingPromptFingerprint == null || promptDecided) return false
+            promptDecision.set(true)
+            promptDecided = true
+            lock.notifyAll()
+            return true
+        }
+    }
+
+    /** Server user rejects the pending prompt pairing. */
+    fun rejectPromptPairing(): Boolean {
+        synchronized(lock) {
+            if (pendingPromptFingerprint == null || promptDecided) return false
+            promptDecision.set(false)
+            promptDecided = true
+            lock.notifyAll()
+            return true
+        }
+    }
+
+    /** Blocks until the server user decides (approve/reject) or the timeout elapses. */
+    fun waitForPromptDecision(timeoutMs: Long = 30_000): Boolean {
+        synchronized(lock) {
+            val deadline = System.currentTimeMillis() + timeoutMs
+            while (!promptDecided && System.currentTimeMillis() < deadline) {
+                try {
+                    lock.wait(deadline - System.currentTimeMillis())
+                } catch (_: InterruptedException) { break }
+            }
+            if (System.currentTimeMillis() >= deadline && !promptDecided) {
+                pendingPromptFingerprint = null
+                pendingPromptExpiresAtMs = 0L
+            }
+            return promptDecision.get()
+        }
+    }
+
+    /** Persists the fingerprint as paired once the client sent PAIR_CONFIRM. */
+    fun completePromptPairing(fingerprint: String): Boolean {
+        synchronized(lock) {
+            if (pendingPromptFingerprint != fingerprint) return false
+            val registry = pairedFingerprints() + fingerprint
+            preferences.edit()
+                .putStringSet(KEY_PAIRED_FINGERPRINTS, registry)
+                .putString(KEY_PAIRED_DEVICE_PREFIX + fingerprint, "Prompt-paired device")
+                .apply()
+            pendingPromptFingerprint = null
+            pendingPromptExpiresAtMs = 0L
+            return true
+        }
+    }
+
+    fun getPendingPromptFingerprint(): String? {
+        synchronized(lock) {
+            val expired = System.currentTimeMillis() > pendingPromptExpiresAtMs
+            if (expired) {
+                pendingPromptFingerprint = null
+                pendingPromptExpiresAtMs = 0L
+                return null
+            }
+            return pendingPromptFingerprint
+        }
+    }
+
     fun isPaired(fingerprint: String): Boolean =
         pairedFingerprints().contains(fingerprint)
 
@@ -126,5 +222,6 @@ class PairingManager(context: Context) {
         private const val KEY_PAIRED_FINGERPRINTS = "paired_fingerprints"
         private const val KEY_PAIRED_DEVICE_PREFIX = "paired_device_"
         const val PAIRING_CODE_TTL_MINUTES = 5L
+        const val PAIRING_PROMPT_TTL_MINUTES = 2L
     }
 }

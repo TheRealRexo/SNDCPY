@@ -45,6 +45,15 @@ class MainActivity : AppCompatActivity() {
         binding.startCaptureButton.setOnClickListener { requestScreenCapture() }
         binding.stopCaptureButton.setOnClickListener { runtime.stopCapture() }
         binding.enableInputButton.setOnClickListener { openAccessibilitySettings() }
+
+        // Prompt pairing approval callback.
+        runtime.onPromptPairingRequested = { approve ->
+            if (approve) {
+                pairingManager.approvePromptPairing()
+            } else {
+                pairingManager.rejectPromptPairing()
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -66,8 +75,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun formatCode(code: String): String {
+        // Display as plain 6-digit number (no spacing)
         if (code.length != 6) return code
-        return code.chunked(2).joinToString(" ")
+        return code
     }
 
     private fun openAccessibilitySettings() {

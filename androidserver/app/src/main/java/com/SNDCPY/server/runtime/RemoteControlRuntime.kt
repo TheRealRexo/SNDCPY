@@ -30,6 +30,10 @@ class RemoteControlRuntime(
     private val appContext = context.applicationContext
     private val sessionManager = SessionManager()
     private val pairingManager = PairingManager(appContext)
+
+    /** Invoked (on main thread) when a device requests prompt pairing. Pass false to reject. */
+    var onPromptPairingRequested: ((Boolean) -> Unit)? = null
+
     private val discovery = LocalDiscoveryPrototype()
     private val nsdAdvertiser = NsdAdvertiser(appContext)
     private val udpBroadcaster = UdpBroadcaster(
@@ -160,6 +164,14 @@ class RemoteControlRuntime(
 
     override fun onPairingCodeIssued(code: String) {
         report("New device requesting pair-in. Code: $code")
+    }
+
+    override fun onPromptPairingRequested(fingerprint: String) {
+        report("Prompt pairing request from ${fingerprint.take(16)}…")
+        // Notify UI on main thread; block until user decides.
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            onPromptPairingRequested?.invoke(true)  // true = approve, false = reject
+        }
     }
 
     override fun onStatus(status: String) {

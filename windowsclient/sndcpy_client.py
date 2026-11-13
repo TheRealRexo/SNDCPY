@@ -29,7 +29,7 @@ try:
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.kdf.hkdf import HKDF
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-    from cryptography.hazmat.primitives.asymmetric.ec import ECPublicKey
+    from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
     CRYPTO_AVAILABLE = True
 except ImportError:
     CRYPTO_AVAILABLE = False
@@ -59,14 +59,17 @@ def hmac_sha256(key: bytes, data: bytes) -> bytes:
 
 
 def generate_ec_keypair():
-    """Generate an ECDH P-256 key pair."""
+    """Generate an ECDH P-256 key pair and return X963-encoded public key."""
     if not CRYPTO_AVAILABLE:
         raise RuntimeError("cryptography not available")
-    private_key = SECP256R1.generate_private_key()
+    from cryptography.hazmat.primitives.asymmetric import ec
+    private_key = ec.generate_private_key(SECP256R1())
     public_key = private_key.public_key()
-    # Return SubjectPublicKeyInfo DER, base64-encoded (no wrapping)
-    der = public_key.public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)
-    return base64.b64encode(der).decode(), private_key
+    # Encode as X963 (0x04 || x || y, 65 bytes), base64-encoded
+    x = public_key.public_numbers().x.to_bytes(32, 'big')
+    y = public_key.public_numbers().y.to_bytes(32, 'big')
+    x963 = b'\x04' + x + y
+    return base64.b64encode(x963).decode(), private_key
 
 
 def encode_public_key_b64(public_key_pem: str) -> str:
