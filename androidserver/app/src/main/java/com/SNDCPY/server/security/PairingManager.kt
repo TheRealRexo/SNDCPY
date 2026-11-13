@@ -3,6 +3,7 @@ package com.SNDCPY.server.security
 import android.content.Context
 import android.content.SharedPreferences
 import java.security.KeyPair
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
@@ -40,9 +41,11 @@ class PairingManager(context: Context) {
     @Volatile
     private var pendingPromptExpiresAtMs: Long = 0L
 
+    /** Signaled when the server user makes a decision on the in-flight prompt pairing. */
+    private var promptDecisionLatch: CountDownLatch? = null
+
     /** UI decision for the in-flight prompt pairing (true = approve, false = reject). */
     private val promptDecision = java.util.concurrent.atomic.AtomicBoolean(false)
-    private var promptDecided = false
 
     val serverKeyPair: KeyPair
         get() {
@@ -108,8 +111,8 @@ class PairingManager(context: Context) {
             pendingPromptFingerprint = fingerprint
             pendingPromptExpiresAtMs = System.currentTimeMillis() +
                 TimeUnit.MINUTES.toMillis(PAIRING_PROMPT_TTL_MINUTES)
-            promptDecided = false
             promptDecision.set(false)
+            promptDecisionLatch = CountDownLatch(1)
             return true
         }
     }
@@ -117,10 +120,10 @@ class PairingManager(context: Context) {
     /** Server user approves the pending prompt pairing. */
     fun approvePromptPairing(): Boolean {
         synchronized(lock) {
-            if (pendingPromptFingerprint == null || promptDecided) return false
+            if (pendingPromptFingerprint == null || promptDecisionLatch == null) return false
             promptDecision.set(true)
-            promptDecided = true
-            lock.notifyAll()
+            promptDecisionLatch?.countDown()
+            promptDecisionLatch = null
             return true
         }
     }
@@ -128,29 +131,31 @@ class PairingManager(context: Context) {
     /** Server user rejects the pending prompt pairing. */
     fun rejectPromptPairing(): Boolean {
         synchronized(lock) {
-            if (pendingPromptFingerprint == null || promptDecided) return false
+            if (pendingPromptFingerprint == null || promptDecisionLatch == null) return false
             promptDecision.set(false)
-            promptDecided = true
-            lock.notifyAll()
+            promptDecisionLatch?.countDown()
+            promptDecisionLatch = null
             return true
         }
     }
 
     /** Blocks until the server user decides (approve/reject) or the timeout elapses. */
     fun waitForPromptDecision(timeoutMs: Long = 30_000): Boolean {
-        synchronized(lock) {
-            val deadline = System.currentTimeMillis() + timeoutMs
-            while (!promptDecided && System.currentTimeMillis() < deadline) {
-                try {
-                    lock.wait(deadline - System.currentTimeMillis())
-                } catch (_: InterruptedException) { break }
-            }
-            if (System.currentTimeMillis() >= deadline && !promptDecided) {
+        val latch = promptDecisionLatch ?: return false
+        try {
+            latch.await(timeoutMs, TimeUnit.MILLISECONDS)
+        } catch (_: InterruptedException) {
+            return false
+        }
+        if (promptDecisionLatch != null) {
+            // Timed out without a decision.
+            synchronized(lock) {
                 pendingPromptFingerprint = null
                 pendingPromptExpiresAtMs = 0L
+                promptDecisionLatch = null
             }
-            return promptDecision.get()
         }
+        return promptDecision.get()
     }
 
     /** Persists the fingerprint as paired once the client sent PAIR_CONFIRM. */

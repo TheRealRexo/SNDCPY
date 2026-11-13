@@ -29,10 +29,18 @@ class RemoteControlRuntime(
 
     private val appContext = context.applicationContext
     private val sessionManager = SessionManager()
-    private val pairingManager = PairingManager(appContext)
+    private val pairingManagerInternal = PairingManager(appContext)
 
-    /** Invoked (on main thread) when a device requests prompt pairing. Pass false to reject. */
-    var onPromptPairingRequested: ((Boolean) -> Unit)? = null
+    /** Exposed for the UI to resolve prompt pairing decisions. */
+    val pairingManager: PairingManager
+        get() = pairingManagerInternal
+
+    /**
+     * Invoked (on main thread) when a device requests prompt pairing.
+     * The callback receives the fingerprint and must call approvePromptPairing() or
+     * rejectPromptPairing() on this PairingManager to resolve the request.
+     */
+    var onPromptPairingRequested: ((fingerprint: String) -> Unit)? = null
 
     private val discovery = LocalDiscoveryPrototype()
     private val nsdAdvertiser = NsdAdvertiser(appContext)
@@ -168,9 +176,9 @@ class RemoteControlRuntime(
 
     override fun onPromptPairingRequested(fingerprint: String) {
         report("Prompt pairing request from ${fingerprint.take(16)}…")
-        // Notify UI on main thread; block until user decides.
+        // Notify UI on main thread; the callback must resolve the latch.
         android.os.Handler(android.os.Looper.getMainLooper()).post {
-            onPromptPairingRequested?.invoke(true)  // true = approve, false = reject
+            onPromptPairingRequested?.invoke(fingerprint)
         }
     }
 

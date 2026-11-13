@@ -1,6 +1,7 @@
 package com.SNDCPY.server
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
@@ -46,13 +47,9 @@ class MainActivity : AppCompatActivity() {
         binding.stopCaptureButton.setOnClickListener { runtime.stopCapture() }
         binding.enableInputButton.setOnClickListener { openAccessibilitySettings() }
 
-        // Prompt pairing approval callback.
-        runtime.onPromptPairingRequested = { approve ->
-            if (approve) {
-                pairingManager.approvePromptPairing()
-            } else {
-                pairingManager.rejectPromptPairing()
-            }
+        // Prompt pairing approval callback — UI shows a dialog and resolves the latch.
+        runtime.onPromptPairingRequested = { fingerprint ->
+            showPromptPairingDialog(fingerprint, runtime)
         }
     }
 
@@ -78,6 +75,23 @@ class MainActivity : AppCompatActivity() {
         // Display as plain 6-digit number (no spacing)
         if (code.length != 6) return code
         return code
+    }
+
+    /**
+     * Shows a Bluetooth-style prompt dialog for a new device requesting to pair.
+     * The user must approve or reject; the PairingManager latch is resolved accordingly.
+     */
+    private fun showPromptPairingDialog(fingerprint: String, runtime: RemoteControlRuntime) {
+        val pairingManager = runtime.pairingManager
+        runOnUiThread {
+            android.app.AlertDialog(this).Builder(this)
+                .setTitle("Pairing Request")
+                .setMessage("New device wants to pair.\nFingerprint: ${fingerprint.take(16)}…")
+                .setPositiveButton("Allow") { _, _ -> pairingManager.approvePromptPairing() }
+                .setNegativeButton("Reject") { _, _ -> pairingManager.rejectPromptPairing() }
+                .setOnCancelListener { pairingManager.rejectPromptPairing() }
+                .show()
+        }
     }
 
     private fun openAccessibilitySettings() {
