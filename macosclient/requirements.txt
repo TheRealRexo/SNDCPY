@@ -1,0 +1,5 @@
+# Required for GUI client
+PyQt6>=6.5.0
+
+# Required for secure mode (ECDH + AES-GCM)
+cryptography>=42.0.0

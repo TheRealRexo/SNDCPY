@@ -129,8 +129,13 @@ jobs:
 
       - name: Build macOS Apple Silicon client
         run: |
-          cd linuxclient
-          pyinstaller --onefile --name SNDCPY-macos-arm64 sndcpy_client.py
+          cd macosclient
+          pip install -r requirements.txt --quiet
+          pyinstaller --onefile --windowed --name SNDCPY-macos-arm64 \
+            --icon sndcpy.icns \
+            --add-data "sndcpy.icns:." \
+            --add-data "sndcpy.png:." \
+            sndcpy_gui_client.py
           mkdir -p dist/zip
           (cd dist && zip -r "zip/SNDCPY-macos-${{ env.VERSION }}-arm64.zip" SNDCPY-macos-arm64)
           ls -la dist/zip/
@@ -138,23 +143,29 @@ jobs:
       - name: Install Rosetta and build macOS Intel client
         run: |
           sudo softwareupdate --install-rosetta --agree-to-license || true
-          cd linuxclient
+          cd macosclient
           arch -x86_64 python3 -m pip install pyinstaller --quiet
-          arch -x86_64 python3 -m PyInstaller --onefile --name SNDCPY-macos-x86_64 sndcpy_client.py
+          arch -x86_64 python3 -m PyInstaller --onefile --windowed --name SNDCPY-macos-x86_64 \
+            --icon sndcpy.icns \
+            --add-data "sndcpy.icns:." \
+            --add-data "sndcpy.png:." \
+            sndcpy_gui_client.py
           mkdir -p dist/zip
           (cd dist && zip -r "zip/SNDCPY-macos-${{ env.VERSION }}-x86_64.zip" SNDCPY-macos-x86_64)
           ls -la dist/zip/
 
       - name: Build macOS Apple Silicon .pkg and DMG
         run: |
-          cd linuxclient
+          cd macosclient
           # Create ARM64 .app bundle for productbuild
           mkdir -p /tmp/pkg_arm64/SNDCPY.app/Contents/MacOS
+          mkdir -p /tmp/pkg_arm64/SNDCPY.app/Contents/Resources
           cp dist/SNDCPY-macos-arm64 /tmp/pkg_arm64/SNDCPY.app/Contents/MacOS/SNDCPY
           chmod +x /tmp/pkg_arm64/SNDCPY.app/Contents/MacOS/SNDCPY
-          printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>CFBundleExecutable</key><string>SNDCPY</string><key>CFBundleIdentifier</key><string>com.sndcpy.client</string><key>CFBundleName</key><string>SNDCPY</string><key>CFBundleVersion</key><string>1.0.0</string></dict></plist>\n' > /tmp/pkg_arm64/SNDCPY.app/Contents/Info.plist
+          cp sndcpy.icns /tmp/pkg_arm64/SNDCPY.app/Contents/Resources/sndcpy.icns
+          cp Info.plist /tmp/pkg_arm64/SNDCPY.app/Contents/Info.plist
           # Create ARM64 .pkg
-          productbuild --component /tmp/pkg_arm64/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.client /tmp/SNDCPY-1.0.0-arm64.pkg
+          productbuild --component /tmp/pkg_arm64/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.macos.client /tmp/SNDCPY-1.0.0-arm64.pkg
           # Create ARM64 DMG
           mkdir -p /tmp/dmg_arm64
           cp -R /tmp/pkg_arm64/SNDCPY.app /tmp/dmg_arm64/
@@ -164,14 +175,16 @@ jobs:
 
       - name: Build macOS x86_64 .pkg and DMG
         run: |
-          cd linuxclient
+          cd macosclient
           # Create x86_64 .app bundle for productbuild
           mkdir -p /tmp/pkg_x86_64/SNDCPY.app/Contents/MacOS
+          mkdir -p /tmp/pkg_x86_64/SNDCPY.app/Contents/Resources
           cp dist/SNDCPY-macos-x86_64 /tmp/pkg_x86_64/SNDCPY.app/Contents/MacOS/SNDCPY
           chmod +x /tmp/pkg_x86_64/SNDCPY.app/Contents/MacOS/SNDCPY
-          printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>CFBundleExecutable</key><string>SNDCPY</string><key>CFBundleIdentifier</key><string>com.sndcpy.client</string><key>CFBundleName</key><string>SNDCPY</string><key>CFBundleVersion</key><string>1.0.0</string></dict></plist>\n' > /tmp/pkg_x86_64/SNDCPY.app/Contents/Info.plist
+          cp sndcpy.icns /tmp/pkg_x86_64/SNDCPY.app/Contents/Resources/sndcpy.icns
+          cp Info.plist /tmp/pkg_x86_64/SNDCPY.app/Contents/Info.plist
           # Create x86_64 .pkg
-          productbuild --component /tmp/pkg_x86_64/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.client /tmp/SNDCPY-1.0.0-x86_64.pkg
+          productbuild --component /tmp/pkg_x86_64/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.macos.client /tmp/SNDCPY-1.0.0-x86_64.pkg
           # Create x86_64 DMG
           mkdir -p /tmp/dmg_x86_64
           cp -R /tmp/pkg_x86_64/SNDCPY.app /tmp/dmg_x86_64/
