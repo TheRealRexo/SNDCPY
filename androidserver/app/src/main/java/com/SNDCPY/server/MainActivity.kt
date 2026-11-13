@@ -1,7 +1,7 @@
 package com.SNDCPY.server
 
 import android.app.Activity
-import android.app AlertDialog
+import android.app.AlertDialog
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
@@ -31,8 +31,8 @@ class MainActivity : AppCompatActivity() {
     private val pickApk = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
-            val uri = result.data!!.data ?: return
+        val uri = if (result.resultCode == Activity.RESULT_OK) result.data?.data else null
+        if (uri != null) {
             SelfUpdater.ensureInstallPermission(this,
                 onGranted = {
                     val ok = SelfUpdater.installFromUri(this, uri)

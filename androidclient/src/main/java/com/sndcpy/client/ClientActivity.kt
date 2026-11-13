@@ -3,7 +3,7 @@ package com.sndcpy.client
 import android.app.Activity
 import android.app.Dialog
 import android.content.Intent
-import.os.Bundle
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.widget.*
