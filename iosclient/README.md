@@ -1,55 +1,56 @@
-# SNDCPY iOS Client
+# SNDCPY iOS Client (v1.0.1)
 
-iOS client for SNDCPY — mirrors and controls an Android device running the SNDCPY server. Built with Swift + Network.framework (NWConnection).
+iOS client for SNDCPY — connects to the SNDCPY server on port 27183 and sends remote input commands.
 
-> **Status:** 1.0.0 — official release. Validated through `0.1.0-beta` → `1.0.0-beta` progression against the Android server's wire protocol v2.
+> **Status:** 1.0.1 — official release. Built with Xcode 16.4, SwiftUI interface.
 
-## Requirements
-
-- iOS 16+ / macOS 13+ (Network.framework)
-- Xcode 15+ / Swift 5.9+
-- An Android device on the same Wi-Fi running `androidserver` (port 27183)
-
-## Build & Run
+## Build
 
 ```bash
-# Open in Xcode
-open Package.swift
-
-# Or build via CLI
-swift build
+cd iosclient
+xcodebuild -sdk iphoneos -configuration Release build
+# Or open iosclient/SNDCPYClient.xcodeproj in Xcode and run
 ```
 
-In the sample app, set `host` to the IP shown in the Android server app, then `connect()`:
+Requires Xcode 16.4+, iOS 16.0+.
 
-```swift
-let client = SNDCPYClient(host: "192.168.1.42", port: 27183)
-client.onMessage = { print("<< \($0)") }
-client.onStateChange = { print("state: \($0)") }
-client.connect()
-client.sendCommand("TAP 500 800")
-```
+## Use
 
-## Pairing
+1. Start the server on another Android device and note its IP.
+2. Open the iOS client app, select a **pairing method**, and enter the IP.
+3. Tap **Connect**. First connect will show pairing method selector:
+   - **Code**: 6-digit code entered via `QInputDialog` alert
+   - **Bluetooth**: mutual confirmation with matching 6-digit codes
+   - **USB**: filtered out (desktop only feature)
+4. Send commands via the touch interface or hardware keyboard.
 
-First connect triggers `PAIRING_REQUIRED` on the server. Call:
+## Pairing Methods (v1.0.1)
 
-```swift
-client.send("PAIR 123456") // code shown on Android device
-```
+Three pairing methods are supported:
 
-The server persists the fingerprint; subsequent connects go straight to `SECURE`.
+| Method | Platforms | Description |
+|--------|-----------|-------------|
+| **Code** | iOS, macOS, Android, Linux, Windows | 6-digit code entered via alert (`QInputDialog`) |
+| **Bluetooth** | iOS, macOS, Android, Linux, Windows | Mutual confirmation — both sides must have matching codes |
+| **USB** | macOS, Linux, Windows only | USB cable connection — no code needed (iOS filtered out) |
 
-## Commands
+> **iOS**: USB method is filtered out. Code and Bluetooth methods are available.
 
-```
-TAP x y
-SWIPE x1 y1 x2 y2 [durMs]
-SCROLL UP|DOWN|LEFT|RIGHT [x y]
-HOME | BACK | RECENTS
-KEY:<code>
-SET_BITRATE <bps> | SET_FPS <fps> | GET_CONFIG
-PING
-```
+## Light/Dark Theme
 
-See `../androidserver/README.md` for the full wire spec and envelope format.
+- **iOS client**: `preferredColorScheme(.dark)` — default dark mode (Liquid Glass styling)
+- **macOS client**: QPalette-based automatic light/dark switching (Liquid Glass style)
+
+## Known Issues
+
+- iOS build requires Apple Developer account for device deployment (simulator works without)
+- USB method available on desktop only (macOS, Linux, Windows); filtered out on iOS
+
+## Links
+
+- **Repository**: https://github.com/TheRealRexo/SNDCPY
+- **Issues**: https://github.com/TheRealRexo/SNDCPY/issues
+
+---*
+
+*SNDCPY — "sound copy" — Inspired by [scrcpy](https://github.com/Genymobile/scrcpy)*

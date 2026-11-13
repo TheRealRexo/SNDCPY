@@ -1,40 +1,50 @@
-# SNDCPY Linux Client
+# SNDCPY Linux Client (v1.0.1)
 
-Linux desktop client for SNDCPY — mirrors and controls an Android device running the SNDCPY server.
+Cross-platform Python client for SNDCPY — connects to the server on port 27183 and handles remote input.
 
-> **Status:** 1.0.0 — official release. Built on top of the `0.1.0-beta` → `1.0.0-beta` progression that validated the wire protocol on this platform.
+> **Status:** 1.0.1 — official release. Built with Python 3.10+ and `cryptography` library.
 
-## Requirements
-
-- Python 3.10+
-- `pip install -r requirements.txt` (only `cryptography` for secure mode, optional)
-
-## Quick Start
+## Build
 
 ```bash
-# 1. Find your Android device IP (shown in server app)
-# 2. Connect — basic handshake
-python3 sndcpy_client.py --host 192.168.1.42 --port 27183
-
-# With secure pairing (first time, provide code shown on device)
-python3 sndcpy_client.py --host 192.168.1.42 --pair-code 123456
-
-# Send a command interactively after connecting
-> TAP 500 800
-> SWIPE 100 500 900 500 200
-> HOME
-> BACK
+cd linuxclient
+pip install -r requirements.txt
+python3 sndcpy_client.py --help
 ```
 
-## Protocol
+Packages: `cryptography`, `PyQt6` (for GUI clients).
 
-Client initiates:
+## Usage
 
+```bash
+python3 sndcpy_client.py --host 192.168.1.42
 ```
-HELLO SNDCPY <clientPubKey> <clientNonce>   // secure mode
-HELLO SNDCPY                                 // legacy fallback
-```
 
-Server replies `SECURE` / `PAIRING_REQUIRED` / `WELCOME`, then encrypted length-prefixed frames.
+## Pairing Methods (v1.0.1)
 
-See `../androidserver/README.md` for full wire spec.
+Three pairing methods are supported:
+
+| Method | Description |
+|--------|-------------|
+| **Code** | 6-digit code entered via terminal input after `PAIRING_REQUIRED` |
+| **Bluetooth** | Mutual confirmation — both sides must have matching 6-digit codes |
+| **USB** | Desktop only — no code; connect via USB cable |
+
+## Light/Dark Themes
+
+- The Python client uses QPalette for light/dark theme switching (macOS build only).
+- CLI mode has no theme.
+
+## Known Issues
+
+- USB method available on desktop (macOS, Linux, Windows) only
+- Audio forwarding requires Android API 29+ on the server device
+
+## Links
+
+- **Repository**: https://github.com/TheRealRexo/SNDCPY
+- **Issues**: https://github.com/TheRealRexo/SNDCPY/releases
+
+---*
+
+*SNDCPY — "sound copy" — Inspired by [scrcpy](https://github.com/Genymobile/scrcpy)*

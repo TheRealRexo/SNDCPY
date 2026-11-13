@@ -29,11 +29,23 @@ PAIRING_REQUIRED <serverPublicKeyB64> <serverNonceB64>
 ERROR <message>
 ```
 
-When `PAIRING_REQUIRED`, the client shows a 6-digit code dialog, then sends:
+When `PAIRING_REQUIRED`, the client shows a pairing method selector with 3 options:
 
-```
-PAIR <6-digit-code>
-```
+### Pairing Methods (v1.0.1)
+
+Three pairing methods are available, selectable from the client connection UI:
+
+| Method | Description |
+|--------|-------------|
+| **Code** | 6-digit code entered via alert dialog. Client shows `QInputDialog` "Enter the 6-digit pairing code:" after receiving `PAIRING_REQUIRED`. The entered code is sent as `PAIR <code>`. |
+| **Bluetooth** | Mutual confirmation — both sides must have matching 6-digit codes. After `PAIRING_REQUIRED`, client shows a confirm code field; sending the code completes pairing when the server also confirms. |
+| **USB** | Desktop only (macOS, Linux, Windows). No code exchange; pairing is completed by connecting the devices via USB cable. iOS filters out this method. |
+
+### After Pairing Selection
+
+- **Code method**: Client shows alert `Enter the 6-digit pairing code:` → user enters code → sends `PAIR <code>` → server replies `PAIRED` or `REJECTED`
+- **Bluetooth method**: Client shows confirm code field → user enters 6-digit code → sends `PAIR <code>` → both sides must confirm → server replies `PAIRED`
+- **USB method**: No code exchange; pairing completes when USB connection is established; server replies `PAIRED`
 
 Server replies `PAIRED` or `REJECTED`. (`PAIRED` proceeds; `REJECTED` closes.)
 
@@ -47,6 +59,9 @@ PRK = HMAC-SHA256(key = salt, data = sharedSecret)
       where salt = clientNonce || serverNonce
 OKM = HKDF-Expand(PRK, info = "SNDCPY-SESSION-KEY-v1", length = 32)
 ```
+
+> **Canonical wire format**: X963 = `0x04||x||y` (65 bytes) base64; salt order is
+> `clientNonce + serverNonce`; info = `SNDCPY-SESSION-KEY-v1`.
 
 ## Phase 3 — Encrypted frames
 
@@ -112,13 +127,13 @@ TEXT:<base64(utf8-chars)>
 
 - The payload is the characters typed by the client's soft keyboard (including
   newlines/backspaces where supported).
-- `\b` (0x08) in the decoded text is treated as a backspace by the server.
+- `` (0x08) in the decoded text is treated as a backspace by the server.
 - The server inserts the text into the currently focused editable field on the
   Android device. On Android clients the app's own `EditText` stays focused with
   the platform keyboard visible; the client forwards the entered characters.
 - Special keys: send `HOME`, `BACK`, `RECENTS`, or `KEY:<keycode>` as commands.
 
-### Server replies
+## Server replies
 
 Server echoes control frames on the control channel (UTF-8) either as a relayed
 message or `ERR rejected: <command>` on failure.
