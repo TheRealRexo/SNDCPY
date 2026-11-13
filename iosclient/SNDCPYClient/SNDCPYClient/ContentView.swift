@@ -379,6 +379,14 @@ final class SNDCPYEngine: ObservableObject {
         }
     }
 
+    /// Called by the server when it requires pairing. Shows the method selector.
+    func requestPairing() {
+        onPairingRequired?()
+        Task { @MainActor in
+            self.showPairingAlert = true
+        }
+    }
+
     func connect(host: String, port: UInt16) {
         let conn = NWConnection(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
         self.connection = conn
@@ -700,12 +708,20 @@ struct ContentView: View {
             }
             .navigationTitle("SNDCPY")
             .alert("Pairing Required", isPresented: $engine.showPairingAlert) {
-                // Dynamic alert buttons based on method
+                Button("Choose Method", role: .cancel) {
+                    // Fall back to the default method if the user just dismisses
+                    if engine.state == .pairing {
+                        engine.showUsbInfo = false
+                    }
+                }
             } message: {
-                Text("Select pairing method")
+                Text("Select a pairing method below, enter the code, then tap Pair")
             }
             .onAppear {
-                engine.onPairingRequired = { DispatchQueue.main.async { } }
+                engine.onPairingRequired = {
+                    // The inline selector below is the entry point; nothing to
+                    // do beyond showing the alert that pairing is required.
+                }
                 discovery.onFound = { srv in
                     if !discoveredServers.contains(where: { $0.ip == srv.ip }) {
                         discoveredServers.append(srv)
@@ -744,7 +760,7 @@ extension SNDCPYEngine {
                 }
             }
         case .code:
-            // Code method: use the code directly (reverted from inline text box)
+            // Code method: use the code directly
             if !pairingCode.isEmpty {
                 Task { @MainActor in
                     await sendPairingCode(pairingCode)

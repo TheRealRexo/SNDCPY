@@ -7,6 +7,7 @@
     <string name="start_capture">Start screen share</string>
     <string name="stop_capture">Stop</string>
     <string name="enable_input">Enable remote input</string>
+    <string name="update_app">Update app from APK</string>
     <string name="capture_notification_title">SNDCPY is capturing your screen</string>
     <string name="capture_notification_text">Streaming this device to a paired client.</string>
     <string name="accessibility_service_description">SNDCPY remote control input engine. Allows a paired SNDCPY client to inject taps, swipes and navigation gestures on this device.</string>

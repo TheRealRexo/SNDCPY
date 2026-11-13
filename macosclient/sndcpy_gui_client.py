@@ -20,10 +20,11 @@ from typing import Optional, Dict, List, Tuple
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLineEdit, QPushButton, QLabel, QTextEdit, QFrame, QScrollArea
+    QLineEdit, QPushButton, QLabel, QTextEdit, QFrame, QScrollArea,
+    QComboBox, QButtonGroup, QGroupBox, QRadioButton, QGridLayout
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QObject
-from PyQt6.QtGui import QFont, QPalette, QColor
+from PyQt6.QtGui import QFont, QPalette, QColor, QGuiApplication
 
 try:
     from cryptography.hazmat.primitives.asymmetric.ec import SECP256R1
@@ -42,6 +43,96 @@ except ImportError:
 DEFAULT_PORT = 27183
 BROADCAST_PORT = 27184
 BROADCAST_PREFIX = "SNDCPYv1"
+
+# ---- Themes (user-selectable: Light / Dark) -----------------------------
+
+def build_dark_palette() -> QPalette:
+    p = QPalette()
+    p.setColor(QPalette.ColorRole.Window, QColor(32, 33, 36))
+    p.setColor(QPalette.ColorRole.WindowText, QColor(235, 235, 235))
+    p.setColor(QPalette.ColorRole.Base, QColor(24, 24, 27))
+    p.setColor(QPalette.ColorRole.AlternateBase, QColor(42, 43, 47))
+    p.setColor(QPalette.ColorRole.ToolTipBase, QColor(24, 24, 27))
+    p.setColor(QPalette.ColorRole.ToolTipText, QColor(235, 235, 235))
+    p.setColor(QPalette.ColorRole.Text, QColor(235, 235, 235))
+    p.setColor(QPalette.ColorRole.Button, QColor(42, 43, 47))
+    p.setColor(QPalette.ColorRole.ButtonText, QColor(235, 235, 235))
+    p.setColor(QPalette.ColorRole.BrightText, QColor(255, 80, 80))
+    p.setColor(QPalette.ColorRole.Link, QColor(90, 170, 255))
+    p.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+    p.setColor(QPalette.ColorRole.HighlightedText, QColor(0, 0, 0))
+    p.setColor(QPalette.ColorRole.PlaceholderText, QColor(140, 140, 145))
+    return p
+
+
+def build_light_palette() -> QPalette:
+    p = QPalette()
+    p.setColor(QPalette.ColorRole.Window, QColor(248, 249, 250))
+    p.setColor(QPalette.ColorRole.WindowText, QColor(24, 26, 28))
+    p.setColor(QPalette.ColorRole.Base, QColor(255, 255, 255))
+    p.setColor(QPalette.ColorRole.AlternateBase, QColor(238, 240, 242))
+    p.setColor(QPalette.ColorRole.ToolTipBase, QColor(255, 255, 255))
+    p.setColor(QPalette.ColorRole.ToolTipText, QColor(24, 26, 28))
+    p.setColor(QPalette.ColorRole.Text, QColor(24, 26, 28))
+    p.setColor(QPalette.ColorRole.Button, QColor(240, 242, 244))
+    p.setColor(QPalette.ColorRole.ButtonText, QColor(24, 26, 28))
+    p.setColor(QPalette.ColorRole.BrightText, QColor(180, 40, 40))
+    p.setColor(QPalette.ColorRole.Link, QColor(20, 100, 200))
+    p.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+    p.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+    p.setColor(QPalette.ColorRole.PlaceholderText, QColor(120, 122, 126))
+    return p
+
+
+DARK_STYLESHEET = """
+QWidget { background: transparent; }
+QMainWindow, QDialog { background-color: #202124; }
+QFrame { border: 1px solid #3c4043; border-radius: 6px; background-color: #292a2d; }
+QLabel { color: #ebebeb; font-size: 13px; }
+QLineEdit { background-color: #18181b; color: #ebebeb; border: 1px solid #3c4043;
+            border-radius: 6px; padding: 4px 8px; selection-background-color: #2a82da; }
+QPushButton { background-color: #2a82da; color: white; border: none; border-radius: 6px;
+              padding: 6px 14px; font-weight: 600; }
+QPushButton:hover { background-color: #3a92ea; }
+QPushButton:pressed { background-color: #1f6bb0; }
+QPushButton:disabled { background-color: #3c4043; color: #8a8d91; }
+QTextEdit { background-color: #18181b; color: #d7d9dc; border: 1px solid #3c4043; border-radius: 6px; }
+QComboBox { background-color: #18181b; color: #ebebeb; border: 1px solid #3c4043;
+            border-radius: 6px; padding: 4px 8px; }
+QComboBox QAbstractItemView { background-color: #18181b; color: #ebebeb;
+                              border: 1px solid #3c4043; selection-background-color: #2a82da; }
+QGroupBox { color: #ebebeb; border: 1px solid #3c4043; border-radius: 6px;
+            margin-top: 8px; padding-top: 8px; }
+QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: #9aa0a6; }
+QRadioButton { color: #ebebeb; font-size: 13px; }
+QMenu { background-color: #18181b; color: #ebebeb; border: 1px solid #3c4043; }
+QMenu::item:selected { background-color: #2a82da; }
+"""
+
+LIGHT_STYLESHEET = """
+QWidget { background: transparent; }
+QMainWindow, QDialog { background-color: #f8f9fa; }
+QFrame { border: 1px solid #d5d9de; border-radius: 6px; background-color: #ffffff; }
+QLabel { color: #181a1c; font-size: 13px; }
+QLineEdit { background-color: #ffffff; color: #181a1c; border: 1px solid #c4c9d0;
+            border-radius: 6px; padding: 4px 8px; selection-background-color: #2a82da; }
+QPushButton { background-color: #2a82da; color: white; border: none; border-radius: 6px;
+              padding: 6px 14px; font-weight: 600; }
+QPushButton:hover { background-color: #3a92ea; }
+QPushButton:pressed { background-color: #1f6bb0; }
+QPushButton:disabled { background-color: #c4c9d0; color: #80858b; }
+QTextEdit { background-color: #ffffff; color: #20242a; border: 1px solid #c4c9d0; border-radius: 6px; }
+QComboBox { background-color: #ffffff; color: #181a1c; border: 1px solid #c4c9d0;
+            border-radius: 6px; padding: 4px 8px; }
+QComboBox QAbstractItemView { background-color: #ffffff; color: #181a1c;
+                              border: 1px solid #c4c9d0; selection-background-color: #2a82da; }
+QGroupBox { color: #181a1c; border: 1px solid #c4c9d0; border-radius: 6px;
+            margin-top: 8px; padding-top: 8px; }
+QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: #6b7075; }
+QRadioButton { color: #181a1c; font-size: 13px; }
+QMenu { background-color: #ffffff; color: #181a1c; border: 1px solid #c4c9d0; }
+QMenu::item:selected { background-color: #2a82da; color: white; }
+"""
 
 
 def generate_ec_keypair():
@@ -303,10 +394,11 @@ class SNDCPYWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("SNDCPY Client")
         self.setMinimumSize(800, 600)
-        
-        # Apply dark theme
-        self._apply_dark_theme()
-        
+
+        # Theme (user-selectable: Light / Dark / System)
+        self.theme = "dark"
+        self._apply_theme(self.theme)
+
         # Worker
         self.worker = ClientWorker()
         self.worker.state_changed.connect(self._on_state_changed)
@@ -314,59 +406,45 @@ class SNDCPYWindow(QMainWindow):
         self.worker.pairing_required.connect(self._on_pairing_required)
         self.worker.connected.connect(self._on_connected)
         self.worker.error.connect(self._on_error)
-        
+
         # Discovery
         self.discovery = DiscoveryWorker()
         self.discovery.server_found.connect(self._on_server_found)
-        
+
         # UI
         self._setup_ui()
-        
+
         # Start discovery
         self.discovery.start()
-    
-    def _apply_dark_theme(self):
-        dark_palette = QPalette()
-        dark_palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
-        dark_palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
-        dark_palette.setColor(QPalette.ColorRole.Base, QColor(25, 25, 25))
-        dark_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
-        dark_palette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
-        dark_palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
-        dark_palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
-        dark_palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
-        dark_palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
-        dark_palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
-        dark_palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
-        dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
-        dark_palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
-        QApplication.instance().setPalette(dark_palette)
-    
+
+    def _apply_theme(self, theme: str):
+        """Apply the selected theme: 'light', 'dark' or 'system'."""
+        app = QApplication.instance()
+        if theme == "system":
+            is_dark = QGuiApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark
+            self.theme = "dark" if is_dark else "light"
+        else:
+            self.theme = theme
+        is_dark = self.theme == "dark"
+        app.setPalette(build_dark_palette() if is_dark else build_light_palette())
+        app.setStyleSheet(DARK_STYLESHEET if is_dark else LIGHT_STYLESHEET)
+        # Keep the combo in sync
+        if hasattr(self, "theme_combo"):
+            block = self.theme_combo.blockSignals(True)
+            self.theme_combo.setCurrentText("Dark" if is_dark else "Light")
+            self.theme_combo.blockSignals(block)
+
+    def _on_theme_changed(self, value: str):
+        self._apply_theme(value)
+
     def _setup_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
         layout.setSpacing(8)
-        
-        # Pairing code row (always visible)
-        pairing_row = QHBoxLayout()
-        pairing_label = QLabel("Pairing code:")
-        pairing_label.setFont(QFont("monospace", 14, QFont.Weight.Bold))
-        self.pairing_code_edit = QLineEdit()
-        self.pairing_code_edit.setPlaceholderText("Enter 6-digit code")
-        self.pairing_code_edit.setInputMethodHints(Qt.InputMethodHint.ImhDigitsOnly)
-        self.pairing_code_edit.setMaximumWidth(150)
-        self.pairing_code_edit.setFont(QFont("monospace", 14))
-        self.pairing_code_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.send_pairing_btn = QPushButton("Send Code")
-        self.send_pairing_btn.clicked.connect(self._send_pairing_code)
-        pairing_row.addWidget(pairing_label)
-        pairing_row.addWidget(self.pairing_code_edit)
-        pairing_row.addWidget(self.send_pairing_btn)
-        layout.addLayout(pairing_row)
-        
-        # Connection row
-        conn_row = QHBoxLayout()
+
+        # ---- Top row: connection + theme selector ----
+        top_row = QHBoxLayout()
         self.host_edit = QLineEdit()
         self.host_edit.setPlaceholderText("Server IP")
         self.host_edit.setText("192.168.1.42")
@@ -376,31 +454,100 @@ class SNDCPYWindow(QMainWindow):
         self.port_edit.setMaximumWidth(80)
         self.connect_btn = QPushButton("Connect")
         self.connect_btn.clicked.connect(self._connect)
-        conn_row.addWidget(QLabel("Server:"))
-        conn_row.addWidget(self.host_edit)
-        conn_row.addWidget(self.port_edit)
-        conn_row.addWidget(self.connect_btn)
-        layout.addLayout(conn_row)
-        
-        # Discovered servers
+        top_row.addWidget(QLabel("Server:"))
+        top_row.addWidget(self.host_edit)
+        top_row.addWidget(self.port_edit)
+        top_row.addWidget(self.connect_btn)
+        top_row.addStretch(1)
+        top_row.addWidget(QLabel("Theme:"))
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItems(["Light", "Dark", "System"])
+        self.theme_combo.setCurrentText("Dark")
+        self.theme_combo.currentTextChanged.connect(self._on_theme_changed)
+        top_row.addWidget(self.theme_combo)
+        layout.addLayout(top_row)
+
+        # ---- Pairing method selector (3 methods, exactly) ----
+        method_group = QGroupBox("Pairing method")
+        method_grid = QGridLayout(method_group)
+        self.method_group = method_group
+        self.method_group_btns = QButtonGroup(self)
+        self.method_group_btns.setExclusive(True)
+
+        self.method_code_btn = QRadioButton("Code")
+        self.method_code_btn.setToolTip("Enter the 6-digit code shown on the server")
+        self.method_bluetooth_btn = QRadioButton("Bluetooth")
+        self.method_bluetooth_btn.setToolTip("Mutual confirmation — both sides confirm")
+        self.method_usb_btn = QRadioButton("USB")
+        self.method_usb_btn.setToolTip("Desktop only — connect via USB cable")
+
+        for i, btn in enumerate([self.method_code_btn, self.method_bluetooth_btn, self.method_usb_btn]):
+            btn.setChecked(i == 0)
+            self.method_group_btns.addButton(btn)
+            method_grid.addWidget(btn, 0, i)
+        method_grid.setColumnStretch(0, 1)
+        method_grid.setColumnStretch(1, 1)
+        method_grid.setColumnStretch(2, 1)
+        self.method_code_btn.toggled.connect(lambda checked, m="Code": self._on_method_toggled(checked, m))
+        self.method_bluetooth_btn.toggled.connect(lambda checked, m="Bluetooth": self._on_method_toggled(checked, m))
+        self.method_usb_btn.toggled.connect(lambda checked, m="USB": self._on_method_toggled(checked, m))
+        layout.addWidget(method_group)
+
+        # ---- Code method row: 6-digit code entry ----
+        self.pairing_row = QHBoxLayout()
+        pairing_label = QLabel("Pairing code:")
+        self.pairing_code_edit = QLineEdit()
+        self.pairing_code_edit.setPlaceholderText("Enter 6-digit code")
+        self.pairing_code_edit.setInputMask("000000;_")
+        self.pairing_code_edit.setMaxLength(6)
+        self.pairing_code_edit.setMaximumWidth(120)
+        self.pairing_code_edit.setFont(QFont("monospace", 14))
+        self.pairing_code_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.send_pairing_btn = QPushButton("Pair")
+        self.send_pairing_btn.clicked.connect(self._send_pairing_code)
+        self.pairing_row.addWidget(pairing_label)
+        self.pairing_row.addWidget(self.pairing_code_edit)
+        self.pairing_row.addWidget(self.send_pairing_btn)
+        self.pairing_row.addStretch(1)
+        layout.addLayout(self.pairing_row)
+
+        # ---- Bluetooth method row: mutual confirmation ----
+        self.bluetooth_row = QHBoxLayout()
+        self.bluetooth_confirm_edit = QLineEdit()
+        self.bluetooth_confirm_edit.setPlaceholderText("6-digit confirm code")
+        self.bluetooth_confirm_edit.setInputMask("000000;_")
+        self.bluetooth_confirm_edit.setMaxLength(6)
+        self.bluetooth_confirm_edit.setMaximumWidth(120)
+        self.bluetooth_confirm_edit.setFont(QFont("monospace", 14))
+        self.bluetooth_confirm_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.bluetooth_confirm_btn = QPushButton("Confirm")
+        self.bluetooth_confirm_btn.clicked.connect(self._confirm_bluetooth)
+        self.bluetooth_row.addWidget(QLabel("Bluetooth confirm code:"))
+        self.bluetooth_row.addWidget(self.bluetooth_confirm_edit)
+        self.bluetooth_row.addWidget(self.bluetooth_confirm_btn)
+        self.bluetooth_row.addStretch(1)
+        layout.addLayout(self.bluetooth_row)
+
+        # Show the row matching the default method (Code)
+        self._on_method_toggled(True, "Code")
+
+        # ---- Discovered servers ----
         self.discovered_label = QLabel("Discovered servers: (listening...)")
-        self.discovered_label.setStyleSheet("color: gray; font-size: 12px;")
         layout.addWidget(self.discovered_label)
-        
+
         self.discovered_frame = QFrame()
-        self.discovered_frame.setFrameStyle(QFrame.Shape.StyledPanel)
         discovered_layout = QVBoxLayout(self.discovered_frame)
         discovered_layout.setSpacing(4)
         self.discovered_buttons: List[Tuple[str, int, QPushButton]] = []
         layout.addWidget(self.discovered_frame)
-        
-        # Status
+
+        # ---- Status ----
         self.status_label = QLabel("Disconnected")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setStyleSheet("font-size: 14px; padding: 8px;")
         layout.addWidget(self.status_label)
-        
-        # Control buttons
+
+        # ---- Control buttons ----
         ctrl_row = QHBoxLayout()
         self.home_btn = QPushButton("Home")
         self.back_btn = QPushButton("Back")
@@ -415,12 +562,11 @@ class SNDCPYWindow(QMainWindow):
         ctrl_row.addWidget(self.back_btn)
         ctrl_row.addWidget(self.recents_btn)
         layout.addLayout(ctrl_row)
-        
-        # Status log
+
+        # ---- Status log ----
         log_label = QLabel("Connection log:")
-        log_label.setStyleSheet("color: gray; font-size: 11px;")
         layout.addWidget(log_label)
-        
+
         self.log_edit = QTextEdit()
         self.log_edit.setReadOnly(True)
         self.log_edit.setMaximumHeight(120)
@@ -479,21 +625,23 @@ class SNDCPYWindow(QMainWindow):
             ""
         )
         if ok and code.strip():
-            self.submit_pairing_code(code.strip())
-        self._log("Server requires pairing code - %s", code if ok else "cancelled")
-    
+            self.worker.submit_pairing_code(code.strip())
+        self._log(f"Server requires pairing code - {code if ok else 'cancelled'}")
+
     def _on_connected(self):
         self._log("Connected and secured")
-    
+
     def _on_error(self, msg: str):
         self._log(f"ERROR: {msg}")
-    
+
     def _log(self, msg: str):
         timestamp = time.strftime("%H:%M:%S")
         self.log_edit.append(f"[{timestamp}] {msg}")
 
     def _on_method_toggled(self, checked: bool, method: str):
         """Handle pairing method selection toggle."""
+        if not checked:
+            return
         # Hide all method-specific rows
         self.pairing_row.setVisible(False)
         self.bluetooth_row.setVisible(False)
@@ -513,7 +661,7 @@ class SNDCPYWindow(QMainWindow):
         code = self.bluetooth_confirm_edit.text().strip()
         if code and len(code) == 6 and code.isdigit():
             # In Bluetooth mode, send our code for server-side confirmation
-            self.submit_pairing_code(code)
+            self.worker.submit_pairing_code(code)
             self._log(f"Bluetooth confirm code sent: {code}")
         elif code:
             self._log(f"Invalid Bluetooth code: must be exactly 6 digits, got '{code}'")

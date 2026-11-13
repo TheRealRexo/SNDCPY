@@ -1,10 +1,11 @@
 package com.SNDCPY.server
 
 import android.app.Activity
-import android.app.AlertDialog
+import android.app AlertDialog
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.SNDCPY.server.databinding.ActivityMainBinding
@@ -27,6 +28,25 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+    private val pickApk = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val uri = result.data!!.data ?: return
+            SelfUpdater.ensureInstallPermission(this,
+                onGranted = {
+                    val ok = SelfUpdater.installFromUri(this, uri)
+                    appendStatus(if (ok) "Installing SNDCPY update…" else "Install failed")
+                },
+                onDenied = {
+                    appendStatus("Grant 'install unknown apps' permission to update")
+                }
+            )
+        } else {
+            appendStatus("Update cancelled")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -46,6 +66,14 @@ class MainActivity : AppCompatActivity() {
         binding.startCaptureButton.setOnClickListener { requestScreenCapture() }
         binding.stopCaptureButton.setOnClickListener { runtime.stopCapture() }
         binding.enableInputButton.setOnClickListener { openAccessibilitySettings() }
+        binding.updateButton.setOnClickListener {
+            appendStatus("Opening APK picker for self-update…")
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/vnd.android.package-archive"
+            }
+            pickApk.launch(intent)
+        }
 
         // Prompt pairing approval callback — UI shows a dialog and resolves the latch.
         runtime.onPromptPairingRequested = { fingerprint ->
