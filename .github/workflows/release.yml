@@ -150,7 +150,7 @@ jobs:
           cd linuxclient
           # Create ARM64 .app bundle for productbuild
           mkdir -p /tmp/pkg_arm64/SNDCPY.app/Contents/MacOS
-          cp SNDCPY-macos-arm64 /tmp/pkg_arm64/SNDCPY.app/Contents/MacOS/SNDCPY
+          cp dist/SNDCPY-macos-arm64 /tmp/pkg_arm64/SNDCPY.app/Contents/MacOS/SNDCPY
           chmod +x /tmp/pkg_arm64/SNDCPY.app/Contents/MacOS/SNDCPY
           printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>CFBundleExecutable</key><string>SNDCPY</string><key>CFBundleIdentifier</key><string>com.sndcpy.client</string><key>CFBundleName</key><string>SNDCPY</string><key>CFBundleVersion</key><string>1.0.0</string></dict></plist>\n' > /tmp/pkg_arm64/SNDCPY.app/Contents/Info.plist
           # Create ARM64 .pkg
@@ -167,7 +167,7 @@ jobs:
           cd linuxclient
           # Create x86_64 .app bundle for productbuild
           mkdir -p /tmp/pkg_x86_64/SNDCPY.app/Contents/MacOS
-          cp SNDCPY-macos-x86_64 /tmp/pkg_x86_64/SNDCPY.app/Contents/MacOS/SNDCPY
+          cp dist/SNDCPY-macos-x86_64 /tmp/pkg_x86_64/SNDCPY.app/Contents/MacOS/SNDCPY
           chmod +x /tmp/pkg_x86_64/SNDCPY.app/Contents/MacOS/SNDCPY
           printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>CFBundleExecutable</key><string>SNDCPY</string><key>CFBundleIdentifier</key><string>com.sndcpy.client</string><key>CFBundleName</key><string>SNDCPY</string><key>CFBundleVersion</key><string>1.0.0</string></dict></plist>\n' > /tmp/pkg_x86_64/SNDCPY.app/Contents/Info.plist
           # Create x86_64 .pkg
