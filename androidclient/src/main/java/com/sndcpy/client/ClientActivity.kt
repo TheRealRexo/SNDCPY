@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.sndcpy.client.R
@@ -117,26 +118,26 @@ class ClientActivity : AppCompatActivity() {
     private fun selectMethod(method: SndcpyClient.PairingMethod) {
         selectedMethod = method
         // Update button visual states
-        methodCodeBtn.isChecked = (method == SndcpyClient.PairingMethod.CODE)
-        methodBluetoothBtn.isChecked = (method == SndcpyClient.PairingMethod.BLUETOOTH)
-        methodUsbBtn.isChecked = (method == SndcpyClient.PairingMethod.USB)
+        methodCodeBtn.isSelected = (method == SndcpyClient.PairingMethod.CODE)
+        methodBluetoothBtn.isSelected = (method == SndcpyClient.PairingMethod.BLUETOOTH)
+        methodUsbBtn.isSelected = (method == SndcpyClient.PairingMethod.USB)
 
         // Hide all method-specific UI
-        pairingCodeEditText.isVisible = false
-        sendPairingCodeButton.isVisible = false
-        bluetoothConfirmEditText.isVisible = false
-        bluetoothConfirmButton.isVisible = false
+        pairingCodeEditText.visibility = View.GONE
+        sendPairingCodeButton.visibility = View.GONE
+        bluetoothConfirmEditText.visibility = View.GONE
+        bluetoothConfirmButton.visibility = View.GONE
 
         // Show the appropriate UI for selected method
         when (method) {
             SndcpyClient.PairingMethod.CODE -> {
-                pairingCodeEditText.isVisible = true
-                sendPairingCodeButton.isVisible = true
+                pairingCodeEditText.visibility = View.VISIBLE
+                sendPairingCodeButton.visibility = View.VISIBLE
                 pairingCodeEditText.hint = "Enter 6-digit pairing code"
             }
             SndcpyClient.PairingMethod.BLUETOOTH -> {
-                bluetoothConfirmEditText.isVisible = true
-                bluetoothConfirmButton.isVisible = true
+                bluetoothConfirmEditText.visibility = View.VISIBLE
+                bluetoothConfirmButton.visibility = View.VISIBLE
                 bluetoothConfirmEditText.hint = "Enter 6-digit confirm code"
             }
             SndcpyClient.PairingMethod.USB -> {
@@ -172,22 +173,11 @@ class ClientActivity : AppCompatActivity() {
         client?.onPairingRequired = {
             runOnUiThread {
                 // Show pairing method selector when server requires pairing
-                // Keep current method selected, just make UI visible
                 selectMethod(selectedMethod)
-                // For Code method, show the code entry field
-                if (selectedMethod == SndcpyClient.PairingMethod.CODE) {
-                    pairingCodeEditText.visibility = View.VISIBLE
-                    sendPairingCodeButton.visibility = View.VISIBLE
-                }
-                // For Bluetooth, show confirm code field
-                if (selectedMethod == SndcpyClient.PairingMethod.BLUETOOTH) {
-                    bluetoothConfirmEditText.visibility = View.VISIBLE
-                    bluetoothConfirmButton.visibility = View.VISIBLE
-                }
             }
         }
-        c.connect()
-        wireListener(c)
+        client?.connect()
+        wireListener(client!!)
     }
 
     private fun wireListener(c: SndcpyClient) {

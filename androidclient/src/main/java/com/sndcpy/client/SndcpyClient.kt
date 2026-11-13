@@ -47,7 +47,7 @@ class SndcpyClient(
     @Volatile var pairingCode: String = ""
     @Volatile var bluetoothConfirmCode: String = ""
 
-    /** Invoked (on the main thread) when a pairing code must be entered. */
+    var listener: Listener? = null
     var onPairingRequired: (() -> Unit)? = null
 
     // Synchronisation for waiting on the user-entered pairing code.

@@ -127,7 +127,7 @@ jobs:
       - name: Install PyInstaller
         run: pip install pyinstaller
 
-- name: Build macOS Apple Silicon client
+      - name: Build macOS Apple Silicon client
         run: |
           cd macosclient
           pip install -r requirements.txt --quiet
@@ -162,13 +162,13 @@ jobs:
           # PyInstaller already created a proper .app bundle with icon
           cp -R dist/SNDCPY-macos-arm64.app /tmp/SNDCPY.app
           # Create ARM64 .pkg
-          productbuild --component /tmp/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.macos.client /tmp/SNDCPY-1.0.0-arm64.pkg
+          productbuild --component /tmp/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.macos.client /tmp/SNDCPY-${{ env.VERSION }}-arm64.pkg
           # Create ARM64 DMG
           mkdir -p /tmp/dmg_arm64
           cp -R /tmp/SNDCPY.app /tmp/dmg_arm64/
           ln -s /Applications /tmp/dmg_arm64/Applications
-          hdiutil create -format UDZO -srcfolder /tmp/dmg_arm64 /tmp/SNDCPY-1.0.0-arm64.dmg
-          ls -la /tmp/SNDCPY-1.0.0-arm64.dmg /tmp/SNDCPY-1.0.0-arm64.pkg
+          hdiutil create -format UDZO -srcfolder /tmp/dmg_arm64 /tmp/SNDCPY-${{ env.VERSION }}-arm64.dmg
+          ls -la /tmp/SNDCPY-${{ env.VERSION }}-arm64.dmg /tmp/SNDCPY-${{ env.VERSION }}-arm64.pkg
 
       - name: Build macOS x86_64 .pkg and DMG
         run: |
@@ -176,24 +176,24 @@ jobs:
           # PyInstaller already created a proper .app bundle with icon
           cp -R dist/SNDCPY-macos-x86_64.app /tmp/SNDCPY.app
           # Create x86_64 .pkg
-          productbuild --component /tmp/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.macos.client /tmp/SNDCPY-1.0.0-x86_64.pkg
+          productbuild --component /tmp/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.macos.client /tmp/SNDCPY-${{ env.VERSION }}-x86_64.pkg
           # Create x86_64 DMG
           mkdir -p /tmp/dmg_x86_64
           cp -R /tmp/SNDCPY.app /tmp/dmg_x86_64/
           ln -s /Applications /tmp/dmg_x86_64/Applications
-          hdiutil create -format UDZO -srcfolder /tmp/dmg_x86_64 /tmp/SNDCPY-1.0.0-x86_64.dmg
-          ls -la /tmp/SNDCPY-1.0.0-x86_64.dmg /tmp/SNDCPY-1.0.0-x86_64.pkg
+          hdiutil create -format UDZO -srcfolder /tmp/dmg_x86_64 /tmp/SNDCPY-${{ env.VERSION }}-x86_64.dmg
+          ls -la /tmp/SNDCPY-${{ env.VERSION }}-x86_64.dmg /tmp/SNDCPY-${{ env.VERSION }}-x86_64.pkg
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-client-build
           path: |
-            /tmp/SNDCPY-1.0.0-arm64.dmg
-            /tmp/SNDCPY-1.0.0-x86_64.dmg
-            /tmp/SNDCPY-1.0.0-arm64.pkg
-            /tmp/SNDCPY-1.0.0-x86_64.pkg
-            linuxclient/dist/zip/SNDCPY-macos-${{ env.VERSION }}-*.zip
+            /tmp/SNDCPY-${{ env.VERSION }}-arm64.dmg
+            /tmp/SNDCPY-${{ env.VERSION }}-x86_64.dmg
+            /tmp/SNDCPY-${{ env.VERSION }}-arm64.pkg
+            /tmp/SNDCPY-${{ env.VERSION }}-x86_64.pkg
+            macosclient/dist/zip/SNDCPY-macos-${{ env.VERSION }}-*.zip
           if-no-files-found: error
 
   linux:
@@ -281,10 +281,10 @@ jobs:
           cp artifacts/ios-client-ipa/*.ipa release-assets/ 2>/dev/null || true
           # macOS client builds
           cp artifacts/macos-client-build/*.zip release-assets/ 2>/dev/null || true
-          cp artifacts/macos-client-build/tmp/SNDCPY-1.0.0-arm64.dmg release-assets/SNDCPY-macos-v1.0.0-arm64.dmg 2>/dev/null || true
-          cp artifacts/macos-client-build/tmp/SNDCPY-1.0.0-x86_64.dmg release-assets/SNDCPY-macos-v1.0.0-x86_64.dmg 2>/dev/null || true
-          cp artifacts/macos-client-build/tmp/SNDCPY-1.0.0-arm64.pkg release-assets/SNDCPY-macos-v1.0.0-arm64.pkg 2>/dev/null || true
-          cp artifacts/macos-client-build/tmp/SNDCPY-1.0.0-x86_64.pkg release-assets/SNDCPY-macos-v1.0.0-x86_64.pkg 2>/dev/null || true
+          cp artifacts/macos-client-build/tmp/SNDCPY-${{ env.VERSION }}-arm64.dmg release-assets/SNDCPY-macos-${{ env.VERSION }}-arm64.dmg 2>/dev/null || true
+          cp artifacts/macos-client-build/tmp/SNDCPY-${{ env.VERSION }}-x86_64.dmg release-assets/SNDCPY-macos-${{ env.VERSION }}-x86_64.dmg 2>/dev/null || true
+          cp artifacts/macos-client-build/tmp/SNDCPY-${{ env.VERSION }}-arm64.pkg release-assets/SNDCPY-macos-${{ env.VERSION }}-arm64.pkg 2>/dev/null || true
+          cp artifacts/macos-client-build/tmp/SNDCPY-${{ env.VERSION }}-x86_64.pkg release-assets/SNDCPY-macos-${{ env.VERSION }}-x86_64.pkg 2>/dev/null || true
           # Linux
           cp artifacts/linux-packages/*.deb release-assets/ 2>/dev/null || true
           cp artifacts/linux-packages/*.rpm release-assets/ 2>/dev/null || true
