@@ -147,28 +147,37 @@ jobs:
 
       - name: Build macOS Apple Silicon .pkg and DMG
         run: |
-          sudo softwareupdate --install-rosetta --agree-to-license || true
           cd linuxclient
+          # Create ARM64 .app bundle for productbuild
+          mkdir -p /tmp/pkg_arm64/SNDCPY.app/Contents/MacOS
+          cp SNDCPY-macos-arm64 /tmp/pkg_arm64/SNDCPY.app/Contents/MacOS/SNDCPY
+          chmod +x /tmp/pkg_arm64/SNDCPY.app/Contents/MacOS/SNDCPY
+          printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>CFBundleExecutable</key><string>SNDCPY</string><key>CFBundleIdentifier</key><string>com.sndcpy.client</string><key>CFBundleName</key><string>SNDCPY</string><key>CFBundleVersion</key><string>1.0.0</string></dict></plist>\n' > /tmp/pkg_arm64/SNDCPY.app/Contents/Info.plist
           # Create ARM64 .pkg
-          mkdir -p /tmp/pkg_arm64
-          cp -R SNDCPY-macos-arm64 /tmp/pkg_arm64/SNDCPY.app
-          productbuild --root /tmp/pkg_arm64 --version ${{ env.VERSION }} --id com.sndcpy.pkg.arm64 /tmp/pkg_arm64/SNDCPY-1.0.0-arm64.pkg
-          # Create x86_64 .pkg
-          mkdir -p /tmp/pkg_x86_64
-          cp -R SNDCPY-macos-x86_64 /tmp/pkg_x86_64/SNDCPY.app
-          productbuild --root /tmp/pkg_x86_64 --version ${{ env.VERSION }} --id com.sndcpy.pkg.x86_64 /tmp/pkg_x86_64/SNDCPY-1.0.0-x86_64.pkg
+          productbuild --component /tmp/pkg_arm64/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.client /tmp/SNDCPY-1.0.0-arm64.pkg
           # Create ARM64 DMG
-          hdiutil create -format UDZO -srcfolder /tmp/pkg_arm64 /tmp/SNDCPY-1.0.0-arm64.dmg
-          # Create x86_64 DMG
-          hdiutil create -format UDZO -srcfolder /tmp/pkg_x86_64 /tmp/SNDCPY-1.0.0-x86_64.dmg
-          ls -la /tmp/*.dmg /tmp/*.pkg
+          mkdir -p /tmp/dmg_arm64
+          cp -R /tmp/pkg_arm64/SNDCPY.app /tmp/dmg_arm64/
+          ln -s /Applications /tmp/dmg_arm64/Applications
+          hdiutil create -format UDZO -srcfolder /tmp/dmg_arm64 /tmp/SNDCPY-1.0.0-arm64.dmg
+          ls -la /tmp/SNDCPY-1.0.0-arm64.dmg /tmp/SNDCPY-1.0.0-arm64.pkg
 
       - name: Build macOS x86_64 .pkg and DMG
         run: |
-          sudo softwareupdate --install-rosetta --agree-to-license || true
           cd linuxclient
-          # Already did above, just listing artifacts
-          ls -la /tmp/*.dmg /tmp/*.pkg
+          # Create x86_64 .app bundle for productbuild
+          mkdir -p /tmp/pkg_x86_64/SNDCPY.app/Contents/MacOS
+          cp SNDCPY-macos-x86_64 /tmp/pkg_x86_64/SNDCPY.app/Contents/MacOS/SNDCPY
+          chmod +x /tmp/pkg_x86_64/SNDCPY.app/Contents/MacOS/SNDCPY
+          printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>CFBundleExecutable</key><string>SNDCPY</string><key>CFBundleIdentifier</key><string>com.sndcpy.client</string><key>CFBundleName</key><string>SNDCPY</string><key>CFBundleVersion</key><string>1.0.0</string></dict></plist>\n' > /tmp/pkg_x86_64/SNDCPY.app/Contents/Info.plist
+          # Create x86_64 .pkg
+          productbuild --component /tmp/pkg_x86_64/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.client /tmp/SNDCPY-1.0.0-x86_64.pkg
+          # Create x86_64 DMG
+          mkdir -p /tmp/dmg_x86_64
+          cp -R /tmp/pkg_x86_64/SNDCPY.app /tmp/dmg_x86_64/
+          ln -s /Applications /tmp/dmg_x86_64/Applications
+          hdiutil create -format UDZO -srcfolder /tmp/dmg_x86_64 /tmp/SNDCPY-1.0.0-x86_64.dmg
+          ls -la /tmp/SNDCPY-1.0.0-x86_64.dmg /tmp/SNDCPY-1.0.0-x86_64.pkg
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
