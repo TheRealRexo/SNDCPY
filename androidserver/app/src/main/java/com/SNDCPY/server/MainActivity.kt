@@ -79,6 +79,11 @@ class MainActivity : AppCompatActivity() {
         runtime.onPromptPairingRequested = { fingerprint ->
             showPromptPairingDialog(fingerprint, runtime)
         }
+
+        // Connect approval callback — require approval BEFORE issuing/displaying pairing code.
+        runtime.onConnectRequestReceived = { fingerprint ->
+            showConnectApprovalDialog(fingerprint, runtime)
+        }
     }
 
     override fun onDestroy() {
@@ -118,6 +123,23 @@ class MainActivity : AppCompatActivity() {
                 .setPositiveButton("Allow") { _, _ -> pairingManager.approvePromptPairing() }
                 .setNegativeButton("Reject") { _, _ -> pairingManager.rejectPromptPairing() }
                 .setOnCancelListener { pairingManager.rejectPromptPairing() }
+                .show()
+        }
+    }
+
+    /**
+     * Shows an approval dialog for an incoming unpaired client connection.
+     * The user must Allow or Reject before a pairing code is issued and shown.
+     */
+    private fun showConnectApprovalDialog(fingerprint: String, runtime: RemoteControlRuntime) {
+        val pairingManager = runtime.pairingManager
+        runOnUiThread {
+            AlertDialog.Builder(this)
+                .setTitle("Incoming pairing request")
+                .setMessage("A new device wants to pair.\nFingerprint: ${fingerprint.take(16)}…\nApprove?")
+                .setPositiveButton("Allow") { _, _ -> pairingManager.approveConnectApproval() }
+                .setNegativeButton("Reject") { _, _ -> pairingManager.rejectConnectApproval() }
+                .setOnCancelListener { pairingManager.rejectConnectApproval() }
                 .show()
         }
     }

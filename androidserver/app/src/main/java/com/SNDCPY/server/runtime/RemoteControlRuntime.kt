@@ -42,6 +42,13 @@ class RemoteControlRuntime(
      */
     var onPromptPairingRequested: ((fingerprint: String) -> Unit)? = null
 
+    /**
+     * Invoked (on main thread) when an unknown client connects and requests pairing.
+     * The callback should trigger a UI approval dialog; once the server user decides,
+     * call approveConnectApproval() or rejectConnectApproval() on the PairingManager.
+     */
+    var onConnectRequestReceived: ((fingerprint: String) -> Unit)? = null
+
     private val discovery = LocalDiscoveryPrototype()
     private val nsdAdvertiser = NsdAdvertiser(appContext)
     private val udpBroadcaster = UdpBroadcaster(
@@ -179,6 +186,13 @@ class RemoteControlRuntime(
         // Notify UI on main thread; the callback must resolve the latch.
         android.os.Handler(android.os.Looper.getMainLooper()).post {
             onPromptPairingRequested?.invoke(fingerprint)
+        }
+    }
+
+    override fun onConnectRequestReceived(fingerprint: String) {
+        report("New device connect request from ${fingerprint.take(16)}… — waiting for approval")
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            onConnectRequestReceived?.invoke(fingerprint)
         }
     }
 

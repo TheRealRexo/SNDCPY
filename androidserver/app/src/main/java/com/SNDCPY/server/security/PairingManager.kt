@@ -47,6 +47,15 @@ class PairingManager(context: Context) {
     /** UI decision for the in-flight prompt pairing (true = approve, false = reject). */
     private val promptDecision = java.util.concurrent.atomic.AtomicBoolean(false)
 
+    /**
+     * Signaled when an unknown client connects and the server user must decide
+     * whether to approve the pairing request before a code is issued.
+     */
+    private var connectDecisionLatch: CountDownLatch? = null
+
+    /** UI decision for the in-flight connect approval (true = approve, false = reject). */
+    private val connectDecision = java.util.concurrent.atomic.AtomicBoolean(false)
+
     val serverKeyPair: KeyPair
         get() {
             cachedKeyPair?.let { return it }
@@ -87,6 +96,62 @@ class PairingManager(context: Context) {
                 TimeUnit.MINUTES.toMillis(PAIRING_CODE_TTL_MINUTES)
             return code
         }
+    }
+
+    /**
+     * Initiates a connect-approval request for an unknown client.
+     * The server user must approve (Allow) or reject (Reject) the incoming
+     * pairing request before any pairing code is issued or shown.
+     * Returns true if the request was initiated, false if already paired or expired.
+     */
+    fun requestConnectApproval(fingerprint: String): Boolean {
+        synchronized(lock) {
+            if (pairedFingerprints().contains(fingerprint)) {
+                return false  // Already paired
+            }
+            connectDecision.set(false)
+            connectDecisionLatch = CountDownLatch(1)
+            return true
+        }
+    }
+
+    /** Server user approves the incoming connect request. */
+    fun approveConnectApproval(): Boolean {
+        synchronized(lock) {
+            if (connectDecisionLatch == null) return false
+            connectDecision.set(true)
+            connectDecisionLatch?.countDown()
+            connectDecisionLatch = null
+            return true
+        }
+    }
+
+    /** Server user rejects the incoming connect request. */
+    fun rejectConnectApproval(): Boolean {
+        synchronized(lock) {
+            if (connectDecisionLatch == null) return false
+            connectDecision.set(false)
+            connectDecisionLatch?.countDown()
+            connectDecisionLatch = null
+            return true
+        }
+    }
+
+    /** Blocks until the server user decides (approve/reject) or the timeout elapses. */
+    fun waitForConnectDecision(timeoutMs: Long = 30_000): Boolean {
+        val latch = connectDecisionLatch ?: return false
+        try {
+            latch.await(timeoutMs, TimeUnit.MILLISECONDS)
+        } catch (_: InterruptedException) {
+            return false
+        }
+        if (connectDecisionLatch != null) {
+            // Timed out without a decision.
+            synchronized(lock) {
+                connectDecisionLatch = null
+            }
+        }
+        return connectDecision.get()
     }
 
     fun verifyPairingCode(code: String): Boolean {

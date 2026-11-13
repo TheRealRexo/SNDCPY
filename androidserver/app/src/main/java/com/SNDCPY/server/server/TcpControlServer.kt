@@ -47,6 +47,7 @@ class TcpControlServer(
         fun onCommandReceived(session: Session, command: String): Boolean
         fun onPairingCodeIssued(code: String)
         fun onPromptPairingRequested(fingerprint: String)
+        fun onConnectRequestReceived(fingerprint: String)
         fun onStatus(status: String)
     }
 
@@ -141,6 +142,15 @@ class TcpControlServer(
                 val serverNonce = CryptoEngine.randomNonce()
 
                 if (!pairingManager.isPaired(clientFingerprint)) {
+                    // Require explicit server-side approval BEFORE revealing a pairing code.
+                    val approved = pairingManager.requestConnectApproval(clientFingerprint) &&
+                        pairingManager.waitForConnectDecision()
+                    if (!approved) {
+                        writer.println("REJECTED")
+                        listener.onStatus("Connect request rejected for $remoteAddress ($clientFingerprint)")
+                        return
+                    }
+                    listener.onConnectRequestReceived(clientFingerprint)
                     val pairingCode = pairingManager.issuePairingCode()
                     listener.onPairingCodeIssued(pairingCode)
                     writer.println("PAIRING_REQUIRED ${CryptoEngine.encodePublicKey(pairingManager.serverKeyPair.public)} ${CryptoEngine.encodeBytes(serverNonce)}")

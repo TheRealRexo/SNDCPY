@@ -428,11 +428,6 @@ class SNDCPYWindow(QMainWindow):
         is_dark = self.theme == "dark"
         app.setPalette(build_dark_palette() if is_dark else build_light_palette())
         app.setStyleSheet(DARK_STYLESHEET if is_dark else LIGHT_STYLESHEET)
-        # Keep the combo in sync
-        if hasattr(self, "theme_combo"):
-            block = self.theme_combo.blockSignals(True)
-            self.theme_combo.setCurrentText("Dark" if is_dark else "Light")
-            self.theme_combo.blockSignals(block)
 
     def _on_theme_changed(self, value: str):
         self._apply_theme(value)
@@ -494,14 +489,15 @@ class SNDCPYWindow(QMainWindow):
         layout.addWidget(method_group)
 
         # ---- Code method row: 6-digit code entry ----
-        self.pairing_row = QHBoxLayout()
+        self.pairing_row_widget = QWidget()
+        self.pairing_row = QHBoxLayout(self.pairing_row_widget)
         pairing_label = QLabel("Pairing code:")
         self.pairing_code_edit = QLineEdit()
         self.pairing_code_edit.setPlaceholderText("Enter 6-digit code")
         self.pairing_code_edit.setInputMask("000000;_")
         self.pairing_code_edit.setMaxLength(6)
         self.pairing_code_edit.setMaximumWidth(120)
-        self.pairing_code_edit.setFont(QFont("monospace", 14))
+        self.pairing_code_edit.setFont(QFont("DejaVu Sans Mono", 14))
         self.pairing_code_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.send_pairing_btn = QPushButton("Pair")
         self.send_pairing_btn.clicked.connect(self._send_pairing_code)
@@ -509,16 +505,17 @@ class SNDCPYWindow(QMainWindow):
         self.pairing_row.addWidget(self.pairing_code_edit)
         self.pairing_row.addWidget(self.send_pairing_btn)
         self.pairing_row.addStretch(1)
-        layout.addLayout(self.pairing_row)
+        layout.addWidget(self.pairing_row_widget)
 
         # ---- Bluetooth method row: mutual confirmation ----
-        self.bluetooth_row = QHBoxLayout()
+        self.bluetooth_row_widget = QWidget()
+        self.bluetooth_row = QHBoxLayout(self.bluetooth_row_widget)
         self.bluetooth_confirm_edit = QLineEdit()
         self.bluetooth_confirm_edit.setPlaceholderText("6-digit confirm code")
         self.bluetooth_confirm_edit.setInputMask("000000;_")
         self.bluetooth_confirm_edit.setMaxLength(6)
         self.bluetooth_confirm_edit.setMaximumWidth(120)
-        self.bluetooth_confirm_edit.setFont(QFont("monospace", 14))
+        self.bluetooth_confirm_edit.setFont(QFont("DejaVu Sans Mono", 14))
         self.bluetooth_confirm_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.bluetooth_confirm_btn = QPushButton("Confirm")
         self.bluetooth_confirm_btn.clicked.connect(self._confirm_bluetooth)
@@ -526,7 +523,7 @@ class SNDCPYWindow(QMainWindow):
         self.bluetooth_row.addWidget(self.bluetooth_confirm_edit)
         self.bluetooth_row.addWidget(self.bluetooth_confirm_btn)
         self.bluetooth_row.addStretch(1)
-        layout.addLayout(self.bluetooth_row)
+        layout.addWidget(self.bluetooth_row_widget)
 
         # Show the row matching the default method (Code)
         self._on_method_toggled(True, "Code")
@@ -570,7 +567,7 @@ class SNDCPYWindow(QMainWindow):
         self.log_edit = QTextEdit()
         self.log_edit.setReadOnly(True)
         self.log_edit.setMaximumHeight(120)
-        self.log_edit.setFont(QFont("monospace", 10))
+        self.log_edit.setFont(QFont("DejaVu Sans Mono", 10))
         layout.addWidget(self.log_edit)
     
     def _on_server_found(self, ip: str, port: int, name: str):
@@ -636,22 +633,23 @@ class SNDCPYWindow(QMainWindow):
 
     def _log(self, msg: str):
         timestamp = time.strftime("%H:%M:%S")
-        self.log_edit.append(f"[{timestamp}] {msg}")
+        if hasattr(self, "log_edit"):
+            self.log_edit.append(f"[{timestamp}] {msg}")
 
     def _on_method_toggled(self, checked: bool, method: str):
         """Handle pairing method selection toggle."""
         if not checked:
             return
         # Hide all method-specific rows
-        self.pairing_row.setVisible(False)
-        self.bluetooth_row.setVisible(False)
+        self.pairing_row_widget.setVisible(False)
+        self.bluetooth_row_widget.setVisible(False)
 
         # Show the appropriate row based on selected method
         if method == "Code":
-            self.pairing_row.setVisible(True)
+            self.pairing_row_widget.setVisible(True)
             self._log("Pairing method: Code (enter 6-digit code)")
         elif method == "Bluetooth":
-            self.bluetooth_row.setVisible(True)
+            self.bluetooth_row_widget.setVisible(True)
             self._log("Pairing method: Bluetooth (mutual confirmation)")
         elif method == "USB":
             self._log("Pairing method: USB (desktop only - connect cable)")
