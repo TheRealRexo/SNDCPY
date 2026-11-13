@@ -127,7 +127,7 @@ jobs:
       - name: Install PyInstaller
         run: pip install pyinstaller
 
-      - name: Build macOS Apple Silicon client
+- name: Build macOS Apple Silicon client
         run: |
           cd macosclient
           pip install -r requirements.txt --quiet
@@ -136,8 +136,9 @@ jobs:
             --add-data "sndcpy.icns:." \
             --add-data "sndcpy.png:." \
             sndcpy_gui_client.py
+          # Zip the .app bundle
           mkdir -p dist/zip
-          (cd dist && zip -r "zip/SNDCPY-macos-${{ env.VERSION }}-arm64.zip" SNDCPY-macos-arm64)
+          (cd dist && zip -r "zip/SNDCPY-macos-${{ env.VERSION }}-arm64.zip" SNDCPY-macos-arm64.app)
           ls -la dist/zip/
 
       - name: Install Rosetta and build macOS Intel client
@@ -150,25 +151,21 @@ jobs:
             --add-data "sndcpy.icns:." \
             --add-data "sndcpy.png:." \
             sndcpy_gui_client.py
+          # Zip the .app bundle
           mkdir -p dist/zip
-          (cd dist && zip -r "zip/SNDCPY-macos-${{ env.VERSION }}-x86_64.zip" SNDCPY-macos-x86_64)
+          (cd dist && zip -r "zip/SNDCPY-macos-${{ env.VERSION }}-x86_64.zip" SNDCPY-macos-x86_64.app)
           ls -la dist/zip/
 
       - name: Build macOS Apple Silicon .pkg and DMG
         run: |
           cd macosclient
-          # Create ARM64 .app bundle for productbuild
-          mkdir -p /tmp/pkg_arm64/SNDCPY.app/Contents/MacOS
-          mkdir -p /tmp/pkg_arm64/SNDCPY.app/Contents/Resources
-          cp dist/SNDCPY-macos-arm64 /tmp/pkg_arm64/SNDCPY.app/Contents/MacOS/SNDCPY
-          chmod +x /tmp/pkg_arm64/SNDCPY.app/Contents/MacOS/SNDCPY
-          cp sndcpy.icns /tmp/pkg_arm64/SNDCPY.app/Contents/Resources/sndcpy.icns
-          cp Info.plist /tmp/pkg_arm64/SNDCPY.app/Contents/Info.plist
+          # PyInstaller already created a proper .app bundle with icon
+          cp -R dist/SNDCPY-macos-arm64.app /tmp/SNDCPY.app
           # Create ARM64 .pkg
-          productbuild --component /tmp/pkg_arm64/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.macos.client /tmp/SNDCPY-1.0.0-arm64.pkg
+          productbuild --component /tmp/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.macos.client /tmp/SNDCPY-1.0.0-arm64.pkg
           # Create ARM64 DMG
           mkdir -p /tmp/dmg_arm64
-          cp -R /tmp/pkg_arm64/SNDCPY.app /tmp/dmg_arm64/
+          cp -R /tmp/SNDCPY.app /tmp/dmg_arm64/
           ln -s /Applications /tmp/dmg_arm64/Applications
           hdiutil create -format UDZO -srcfolder /tmp/dmg_arm64 /tmp/SNDCPY-1.0.0-arm64.dmg
           ls -la /tmp/SNDCPY-1.0.0-arm64.dmg /tmp/SNDCPY-1.0.0-arm64.pkg
@@ -176,18 +173,13 @@ jobs:
       - name: Build macOS x86_64 .pkg and DMG
         run: |
           cd macosclient
-          # Create x86_64 .app bundle for productbuild
-          mkdir -p /tmp/pkg_x86_64/SNDCPY.app/Contents/MacOS
-          mkdir -p /tmp/pkg_x86_64/SNDCPY.app/Contents/Resources
-          cp dist/SNDCPY-macos-x86_64 /tmp/pkg_x86_64/SNDCPY.app/Contents/MacOS/SNDCPY
-          chmod +x /tmp/pkg_x86_64/SNDCPY.app/Contents/MacOS/SNDCPY
-          cp sndcpy.icns /tmp/pkg_x86_64/SNDCPY.app/Contents/Resources/sndcpy.icns
-          cp Info.plist /tmp/pkg_x86_64/SNDCPY.app/Contents/Info.plist
+          # PyInstaller already created a proper .app bundle with icon
+          cp -R dist/SNDCPY-macos-x86_64.app /tmp/SNDCPY.app
           # Create x86_64 .pkg
-          productbuild --component /tmp/pkg_x86_64/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.macos.client /tmp/SNDCPY-1.0.0-x86_64.pkg
+          productbuild --component /tmp/SNDCPY.app /Applications --version ${{ env.VERSION }} --id com.sndcpy.macos.client /tmp/SNDCPY-1.0.0-x86_64.pkg
           # Create x86_64 DMG
           mkdir -p /tmp/dmg_x86_64
-          cp -R /tmp/pkg_x86_64/SNDCPY.app /tmp/dmg_x86_64/
+          cp -R /tmp/SNDCPY.app /tmp/dmg_x86_64/
           ln -s /Applications /tmp/dmg_x86_64/Applications
           hdiutil create -format UDZO -srcfolder /tmp/dmg_x86_64 /tmp/SNDCPY-1.0.0-x86_64.dmg
           ls -la /tmp/SNDCPY-1.0.0-x86_64.dmg /tmp/SNDCPY-1.0.0-x86_64.pkg
