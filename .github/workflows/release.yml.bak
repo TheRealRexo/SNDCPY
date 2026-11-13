@@ -1,0 +1,262 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  VERSION: ${{ github.ref_name }}
+  JAVA_VERSION: '17'
+
+jobs:
+  android:
+    name: Android Server & Client
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Setup Android SDK
+        run: |
+          # The GitHub runner image ships with a working Android SDK
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export ANDROID_SDK_ROOT=$ANDROID_HOME
+          export PATH=$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          # Accept all SDK licenses
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses 2>&1 | tail -3
+          # Install required packages
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --install \
+            "platform-tools" \
+            "platforms;36" \
+            "build-tools;34.0.0" 2>&1 | tail -10
+
+      - name: Make gradlew executable
+        run: chmod +x androidserver/gradlew androidclient/gradlew
+
+      - name: Build Android Server
+        run: |
+          cd androidserver
+          ./gradlew assembleDebug
+
+      - name: Build Android Client
+        run: |
+          cd androidclient
+          ./gradlew assembleDebug
+
+      - name: Upload Server APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-server-apk
+          path: androidserver/app/build/outputs/apk/debug/*.apk
+
+      - name: Upload Client APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-client-apk
+          path: androidclient/build/outputs/apk/debug/*.apk
+
+  ios:
+    name: iOS Client (App)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.4'
+
+      - name: Build unsigned device IPA (iPhone/iPad, arm64)
+        run: |
+          cd iosclient
+          xcodebuild -project SNDCPYClient.xcodeproj \
+            -scheme SNDCPYClient \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath ./build/DerivedData \
+            SDKROOT=iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+          APP=$(find build/DerivedData -name 'SNDCPYClient.app' -type d | head -1)
+          echo "Found app: $APP"
+          if [ -z "$APP" ]; then
+            echo "::error::No .app produced by xcodebuild"
+            exit 1
+          fi
+          mkdir -p build/ipa/Payload
+          cp -R "$APP" build/ipa/Payload/SNDCPYClient.app
+          (cd build/ipa && zip -r "../SNDCPY-iOS-${{ env.VERSION }}.ipa" Payload)
+          ls -la build/SNDCPY-iOS-${{ env.VERSION }}.ipa
+
+      - name: Upload iOS IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-client-ipa
+          path: iosclient/build/SNDCPY-iOS-${{ env.VERSION }}.ipa
+          if-no-files-found: error
+
+  macos:
+    name: macOS Client (x86_64 + Apple Silicon)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Build macOS Apple Silicon client
+        run: |
+          cd linuxclient
+          pyinstaller --onefile --name SNDCPY-macos-arm64 sndcpy_client.py
+          mkdir -p dist/zip
+          (cd dist && zip -r "zip/SNDCPY-macos-${{ env.VERSION }}-arm64.zip" SNDCPY-macos-arm64)
+          ls -la dist/zip/
+
+      - name: Install Rosetta and build macOS Intel client
+        run: |
+          sudo softwareupdate --install-rosetta --agree-to-license || true
+          cd linuxclient
+          arch -x86_64 python3 -m pip install pyinstaller --quiet
+          arch -x86_64 python3 -m PyInstaller --onefile --name SNDCPY-macos-x86_64 sndcpy_client.py
+          mkdir -p dist/zip
+          (cd dist && zip -r "zip/SNDCPY-macos-${{ env.VERSION }}-x86_64.zip" SNDCPY-macos-x86_64)
+          ls -la dist/zip/
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-client-build
+          path: linuxclient/dist/zip/SNDCPY-macos-${{ env.VERSION }}-*.zip
+          if-no-files-found: error
+
+  linux:
+    name: Linux Client
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev rpm
+
+      - name: Download appimagetool
+        run: |
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          sudo mv appimagetool-x86_64.AppImage /usr/local/bin/appimagetool
+
+      - name: Build Linux packages
+        run: |
+          cd linuxclient
+          chmod +x build_linux.sh
+          ./build_linux.sh --all
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: |
+            linuxclient/dist/*.deb
+            linuxclient/dist/*.rpm
+            linuxclient/dist/*.AppImage
+
+  windows:
+    name: Windows Client
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Install Inno Setup
+        run: |
+          choco install innosetup --force
+
+      - name: Build Windows artifacts
+        shell: pwsh
+        run: |
+          cd windowsclient
+          ./build_windows.ps1 -All
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifacts
+          path: windowsclient/dist/*
+
+  release:
+    name: Create Release
+    needs: [android, ios, macos, linux, windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          # Android
+          cp artifacts/android-server-apk/*.apk release-assets/SNDCPY-Server-${{ env.VERSION }}.apk 2>/dev/null || true
+          cp artifacts/android-client-apk/*.apk release-assets/SNDCPY-Client-${{ env.VERSION }}.apk 2>/dev/null || true
+          # iOS (unsigned device .ipa)
+          cp artifacts/ios-client-ipa/*.ipa release-assets/ 2>/dev/null || true
+          # macOS client builds
+          cp artifacts/macos-client-build/*.zip release-assets/ 2>/dev/null || true
+          # Linux
+          cp artifacts/linux-packages/*.deb release-assets/ 2>/dev/null || true
+          cp artifacts/linux-packages/*.rpm release-assets/ 2>/dev/null || true
+          cp artifacts/linux-packages/*.AppImage release-assets/ 2>/dev/null || true
+          # Windows
+          cp artifacts/windows-artifacts/SNDCPY-*.zip release-assets/ 2>/dev/null || true
+          cp artifacts/windows-artifacts/SNDCPY-Setup-*.exe release-assets/ 2>/dev/null || true
+          cp artifacts/windows-artifacts/SNDCPY-*.exe release-assets/ 2>/dev/null || true
+
+          ls -la release-assets/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: SNDCPY ${{ github.ref_name }} — Official Release
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: release-assets/*
+          body_path: RELEASE_NOTES.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

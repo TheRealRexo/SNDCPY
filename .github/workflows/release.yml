@@ -145,11 +145,41 @@ jobs:
           (cd dist && zip -r "zip/SNDCPY-macos-${{ env.VERSION }}-x86_64.zip" SNDCPY-macos-x86_64)
           ls -la dist/zip/
 
+      - name: Build macOS Apple Silicon .pkg and DMG
+        run: |
+          sudo softwareupdate --install-rosetta --agree-to-license || true
+          cd linuxclient
+          # Create ARM64 .pkg
+          mkdir -p /tmp/pkg_arm64
+          cp -R SNDCPY-macos-arm64 /tmp/pkg_arm64/SNDCPY.app
+          productbuild --root /tmp/pkg_arm64 --version ${{ env.VERSION }} --id com.sndcpy.pkg.arm64 /tmp/pkg_arm64/SNDCPY-1.0.0-arm64.pkg
+          # Create x86_64 .pkg
+          mkdir -p /tmp/pkg_x86_64
+          cp -R SNDCPY-macos-x86_64 /tmp/pkg_x86_64/SNDCPY.app
+          productbuild --root /tmp/pkg_x86_64 --version ${{ env.VERSION }} --id com.sndcpy.pkg.x86_64 /tmp/pkg_x86_64/SNDCPY-1.0.0-x86_64.pkg
+          # Create ARM64 DMG
+          hdiutil create -format UDZO -srcfolder /tmp/pkg_arm64 /tmp/SNDCPY-1.0.0-arm64.dmg
+          # Create x86_64 DMG
+          hdiutil create -format UDZO -srcfolder /tmp/pkg_x86_64 /tmp/SNDCPY-1.0.0-x86_64.dmg
+          ls -la /tmp/*.dmg /tmp/*.pkg
+
+      - name: Build macOS x86_64 .pkg and DMG
+        run: |
+          sudo softwareupdate --install-rosetta --agree-to-license || true
+          cd linuxclient
+          # Already did above, just listing artifacts
+          ls -la /tmp/*.dmg /tmp/*.pkg
+
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-client-build
-          path: linuxclient/dist/zip/SNDCPY-macos-${{ env.VERSION }}-*.zip
+          path: |
+            /tmp/SNDCPY-1.0.0-arm64.dmg
+            /tmp/SNDCPY-1.0.0-x86_64.dmg
+            /tmp/SNDCPY-1.0.0-arm64.pkg
+            /tmp/SNDCPY-1.0.0-x86_64.pkg
+            linuxclient/dist/zip/SNDCPY-macos-${{ env.VERSION }}-*.zip
           if-no-files-found: error
 
   linux:
