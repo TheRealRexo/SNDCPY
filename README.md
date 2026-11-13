@@ -66,11 +66,13 @@ adb install build/outputs/apk/release/app-release.apk
 
 **iOS**
 
-```swift
-// Swift Package
-let client = SNDCPYClient(host: "192.168.1.42")
-client.connect()
-// or: open iosclient/Package.swift in Xcode and Run
+```bash
+# Download SNDCPY-iOS-v1.0.0.ipa from Releases
+unzip SNDCPY-iOS-v1.0.0.ipa -d /tmp/SNDCPY-iOS
+# Install via sideloader (AltStore) or re-sign with your Apple ID:
+#   xcrun codesign --force --sign "YOUR_DEVELOPER_ID" \
+#     /tmp/SNDCPY-iOS/Payload/SNDCPYClient.app
+#   zip -r SNDCPY-iOS-signed.ipa /tmp/SNDCPY-iOS/Payload
 ```
 
 **macOS**
@@ -181,7 +183,7 @@ See [androidserver/README.md](androidserver/README.md) for channel details.
 SNDCPY/
 ├── androidserver/   → Android server (Kotlin, MediaProjection, MediaCodec)
 ├── androidclient/   → Android client (Kotlin, NW + handshake)
-├── iosclient/       → iOS client (Swift, UIKit, Network.framework)
+├── iosclient/       → iOS client (SwiftUI, Network.framework)
 ├── macosclient/     → macOS client (Python + PyQt6, PyInstaller bundle)
 ├── linuxclient/     → Cross-platform Python client (also builds macOS binaries)
 ├── windowsclient/   → Windows client (Python, sockets)
@@ -196,7 +198,7 @@ Each folder is an independent build:
 |-----------|-------|
 | `androidserver` | `cd androidserver && ./gradlew assembleDebug` |
 | `androidclient` | `cd androidclient && ./gradlew assembleDebug` |
-| `iosclient` | `cd iosclient && xcodebuild -sdk iphoneos -configuration Release build` |
+| `iosclient` | `xcodebuild -project iosclient/SNDCPYClient.xcodeproj -scheme SNDCPYClient -sdk iphoneos -configuration Release build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES` (no developer cert required for unsigned device IPA) |
 | `macosclient` | `cd macosclient && pyinstaller SNDCPY-macos-arm64.spec` |
 | `linuxclient` | `pip install -r linuxclient/requirements.txt && python3 linuxclient/sndcpy_gui_client.py --host 192.168.1.42` |
 | `windowsclient` | `py -3 windowsclient/sndcpy_gui_client.py --host 192.168.1.42` |
@@ -224,7 +226,8 @@ SNDCPY now supports exactly **3 pairing methods**, selectable from the client UI
 - [Server details](androidserver/README.md)
 - [Android client](androidclient/README.md)
 - [iOS client](iosclient/README.md)
-- [macOS / Linux client](linuxclient/README.md)
+- [macOS client](macosclient/README.md)
+- [Linux client](linuxclient/README.md)
 - [Windows client](windowsclient/README.md)
 - [Flatpak](flatpak/README.md)
 - [Releases](https://github.com/TheRealRexo/SNDCPY/releases)

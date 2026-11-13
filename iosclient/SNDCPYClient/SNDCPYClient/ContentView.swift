@@ -189,11 +189,11 @@ final class TouchSurfaceView: UIView {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { onCommand("POINTER_UP", t) }
+        for t in touches { command("POINTER_UP", t) }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { onCommand("POINTER_UP", t) }
+        for t in touches { command("POINTER_UP", t) }
     }
 }
 
@@ -402,7 +402,7 @@ final class SNDCPYEngine: ObservableObject {
                 let nonce = engine.clientNonce.base64EncodedString()
                 let hello = "HELLO SNDCPY \(pub) \(nonce)\n"
                 conn.send(content: hello.data(using: .utf8), completion: .contentProcessed { _ in
-                    engine.readTextLine { line in engine.handleHandshake(line) })
+                    engine.readTextLine { line in engine.handleHandshake(line) }
                 })
             case .failed(let e):
                 Task { @MainActor in
@@ -569,7 +569,7 @@ struct ContentView: View {
     @State private var showPairing = false
     @State private var pairingInput = ""
     @State private var discoveryStatus = "Searching…"
-    @State private var discoveredServers: [SNDCPYEngine.DiscoveryObserver.Discovered] = []
+    @State private var discoveredServers: [DiscoveryObserver.Discovered] = []
 
     private let discovery = DiscoveryObserver()
 

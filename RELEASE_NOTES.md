@@ -39,6 +39,14 @@
 - Auto-discovery over LAN UDP beacon (`port 27184`) and mDNS (`_sndcpy._tcp.`).
 - Touch surface with pointer events + keyboard passthrough.
 
+### iOS Client
+
+- 3-method pairing selector (USB filtered out on iOS per requirements).
+- LAN discovery over UDP beacon (`port 27184`).
+- Multi-touch input surface with pointer events.
+- SwiftUI + Network.framework, builds for device (arm64).
+- **Unsigned device IPA** — requires a personal provisioning profile to install on device (sideload with AltStore or re-sign with your own certificate).
+
 ### macOS Client
 
 - PyInstaller `.app` bundle (`SNDCPY.app`) built for Apple Silicon.
@@ -51,6 +59,7 @@
 |-------|----------|-------|
 | `SNDCPY-Server-v1.0.0.apk` | Android (ARM) | Server + self-update |
 | `SNDCPY-Client-v1.0.0.apk` | Android (ARM) | LAN discovery + 3-method pairing |
+| `SNDCPY-iOS-v1.0.0.ipa` | iOS (arm64) | Unsigned device IPA (SwiftUI + Network.framework) |
 | `SNDCPY-macos-v1.0.0-arm64.zip` | macOS (Apple Silicon) | Standalone `.app` bundle |
 | `SNDCPY-v1.0.0-arm64.dmg` | macOS (Apple Silicon) | Disk image installer |
 | `SNDCPY-v1.0.0-arm64.pkg` | macOS (Apple Silicon) | Installer package |
@@ -71,6 +80,15 @@ adb install SNDCPY-Server-v1.0.0.apk
 ```bash
 adb install SNDCPY-Client-v1.0.0.apk
 # Enter the server IP and tap Connect
+```
+
+### iOS
+
+```bash
+# Unsigned device IPA — install via sideloader (AltStore/Sideloadly)
+# or re-sign with your own Apple ID: xcodebuild / re-sign and repackage
+unzip SNDCPY-iOS-v1.0.0.ipa -d /tmp/SNDCPY-iOS
+# Payload/SNDCPYClient.app → sign → re-zip → install
 ```
 
 ### macOS
