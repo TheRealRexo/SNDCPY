@@ -202,13 +202,13 @@ class ClientWorker(QObject):
             return
         try:
             server_public_der = decode_bytes_b64(self.server_public_b64)
-            server_key = ECPublicKey.from_encoded_point(SECP256R1(), server_public_der)
+            server_key = EllipticCurvePublicKey.from_encoded_point(SECP256R1(), server_public_der)
             client_key = self.client_private.public_key()
             shared = client_key.exchange(ec.ECDH(), server_key)
             hkdf = HKDF(
                 algorithm=hashes.SHA256(),
                 length=32,
-                salt=decode_bytes_b64(self.server_nonce_b64) + decode_bytes_b64(self.client_nonce_b64),
+                salt=decode_bytes_b64(self.client_nonce_b64) + decode_bytes_b64(self.server_nonce_b64),
                 info=b"SNDCPY-SESSION-KEY-v1"
             )
             self.session_key = hkdf.derive(shared)
@@ -471,8 +471,16 @@ class SNDCPYWindow(QMainWindow):
         self._log(msg)
     
     def _on_pairing_required(self):
-        self.pairing_code_edit.setFocus()
-        self._log("Server requires pairing code")
+        # Show alert with pairing code entry via QInputDialog (reverted from inline text box)
+        code, ok = QInputDialog.getText(
+            self, "Pairing Required",
+            "Enter the 6-digit pairing code:",
+            QLineEdit.EchoMode.Normal,
+            ""
+        )
+        if ok and code.strip():
+            self.submit_pairing_code(code.strip())
+        self._log("Server requires pairing code - %s", code if ok else "cancelled")
     
     def _on_connected(self):
         self._log("Connected and secured")
@@ -483,6 +491,34 @@ class SNDCPYWindow(QMainWindow):
     def _log(self, msg: str):
         timestamp = time.strftime("%H:%M:%S")
         self.log_edit.append(f"[{timestamp}] {msg}")
+
+    def _on_method_toggled(self, checked: bool, method: str):
+        """Handle pairing method selection toggle."""
+        # Hide all method-specific rows
+        self.pairing_row.setVisible(False)
+        self.bluetooth_row.setVisible(False)
+
+        # Show the appropriate row based on selected method
+        if method == "Code":
+            self.pairing_row.setVisible(True)
+            self._log("Pairing method: Code (enter 6-digit code)")
+        elif method == "Bluetooth":
+            self.bluetooth_row.setVisible(True)
+            self._log("Pairing method: Bluetooth (mutual confirmation)")
+        elif method == "USB":
+            self._log("Pairing method: USB (desktop only - connect cable)")
+
+    def _confirm_bluetooth(self):
+        """Handle Bluetooth-style mutual confirmation."""
+        code = self.bluetooth_confirm_edit.text().strip()
+        if code and len(code) == 6 and code.isdigit():
+            # In Bluetooth mode, send our code for server-side confirmation
+            self.submit_pairing_code(code)
+            self._log(f"Bluetooth confirm code sent: {code}")
+        elif code:
+            self._log(f"Invalid Bluetooth code: must be exactly 6 digits, got '{code}'")
+        else:
+            self._log("No Bluetooth confirm code entered")
 
 
 def main():

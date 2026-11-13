@@ -150,13 +150,7 @@ class TcpControlServer(
                     for (attempt in 1..PAIRING_ATTEMPTS) {
                         val line = reader.readLine()?.trim().orEmpty()
                         val parts = line.split(WHITESPACE_REGEX)
-                        if (parts.size == 2 && parts[0] == "PAIR") {
-                            // Classic pairing with a 6-digit code.
-                            if (pairingManager.verifyPairingCode(parts[1])) {
-                                paired = true
-                                break
-                            }
-                        } else if (parts.size == 2 && parts[0] == "PAIR" && parts[1] == "PROMPT") {
+                        if (parts.size == 2 && parts[0] == "PAIR" && parts[1] == "PROMPT") {
                             // Bluetooth-style prompt pairing: both sides must confirm.
                             if (pairingManager.requestPromptPairing(clientFingerprint)) {
                                 listener.onPromptPairingRequested(clientFingerprint)
@@ -177,6 +171,12 @@ class TcpControlServer(
                                 writer.println("REJECTED")
                                 listener.onStatus("Prompt pairing not confirmed by client ($remoteAddress)")
                                 return
+                            }
+                        } else if (parts.size == 2 && parts[0] == "PAIR") {
+                            // Classic pairing with a 6-digit code.
+                            if (pairingManager.verifyPairingCode(parts[1])) {
+                                paired = true
+                                break
                             }
                         }
                     }

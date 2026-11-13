@@ -38,14 +38,11 @@ final class VideoSink: ObservableObject {
 
     func feed(_ payload: Data, _ ptsUs: Int64) {
         guard let display = display else { return }
-        // On iOS, AVSampleBufferDisplayLayer needs a format description built
-        // from the SPS/PPS. We build it once from the first access unit.
         if formatDescription == nil {
             buildFormatDescription(from: payload)
         }
         guard let fmt = formatDescription else { return }
 
-        // Wrap the payload as an Annex-B sample buffer.
         var blockBuffer: CMBlockBuffer?
         let status = payload.withUnsafeBytes { ptr in
             CMBlockBufferCreateWithMemoryBlock(
@@ -87,7 +84,6 @@ final class VideoSink: ObservableObject {
     }
 
     private func buildFormatDescription(from payload: Data) {
-        // Find SPS (type 7) and PPS (type 8) NALs.
         let (sps, pps) = extractParameterSets(payload)
         guard let sps = sps, let pps = pps else { return }
         let paramSetPtrs = [UnsafePointer<UInt8>(OpaquePointer(sps.withUnsafeBytes { $0.baseAddress! })),
@@ -108,7 +104,6 @@ final class VideoSink: ObservableObject {
 
     private func extractParameterSets(_ data: Data) -> (Data?, Data?) {
         let startCode = Data([0x00, 0x00, 0x00, 0x01])
-        // Find each NAL by scanning start codes.
         var nals: [(Int, Data)] = []
         var idx = 0
         while idx <= data.count - 4 {
@@ -163,8 +158,6 @@ struct H264View: UIViewRepresentable {
 }
 
 // MARK: - Multi-touch input surface
-/// Captures true multi-touch using standard UIKit touches and forwards
-/// pointer commands (POINTER_DOWN/MOVE/UP per touch id) to the engine.
 final class TouchSurfaceView: UIView {
     var onCommand: ((String) -> Void)?
     private let serverW: CGFloat = 1280
@@ -196,11 +189,11 @@ final class TouchSurfaceView: UIView {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { onCommand?("POINTER_UP \(t.hash)") }
+        for t in touches { onCommand("POINTER_UP", t) }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { onCommand?("POINTER_UP \(t.hash)") }
+        for t in touches { onCommand("POINTER_UP", t) }
     }
 }
 
@@ -221,9 +214,6 @@ struct TouchSurface: UIViewRepresentable {
 }
 
 // MARK: - UDP discovery observer
-/// Listens for SNDCPY UDP beacons on the LAN. The server broadcasts
-/// `SNDCPYv1 ip=<ip> port=<port> name=<name> proto=2 secure=1` every 3s
-/// to 255.255.255.255:27184; we bind the same port and parse the packets.
 final class DiscoveryObserver {
     struct Discovered {
         let ip: String
@@ -274,7 +264,6 @@ final class DiscoveryObserver {
             close(sock)
             return
         }
-
         socket = sock
         while running {
             var buffer = [UInt8](repeating: 0, count: 512)
@@ -287,7 +276,7 @@ final class DiscoveryObserver {
             }
             guard received > 0 else {
                 if !running { break }
-                usleep(100_000) // 100ms
+                usleep(100_000)
                 continue
             }
             let text = String(bytes: buffer[0..<received], encoding: .utf8) ?? ""
@@ -327,6 +316,7 @@ final class SNDCPYEngine: ObservableObject {
             return false
         }
     }
+
     @Published var state: State = .idle
     let sink = VideoSink()
 
@@ -334,9 +324,23 @@ final class SNDCPYEngine: ObservableObject {
     private let queue = DispatchQueue(label: "sndcpy.client.queue")
     private let keyPair = P256.KeyAgreement.PrivateKey()
     private let clientNonce = Data((0..<16).map { _ in UInt8.random(in: 0...255) })
-    private var serverNonce = Data()
+    @Published var serverNonce = Data()
     private var sessionKey: SymmetricKey?
     private var readFrames = true
+
+    // Pairing methods: CODE, BLUETOOTH (mutual confirm), USB (desktop only)
+    enum PairingMethod: String, CaseIterable, Identifiable {
+        case code = "Code"
+        case bluetooth = "Bluetooth"
+        case usb = "USB"
+        var id: String { rawValue }
+    }
+
+    @Published var selectedPairingMethod: PairingMethod = .code
+    @Published var showPairingAlert = false
+    @Published var pairingCode: String = ""
+    @Published var bluetoothConfirmCode: String = ""
+    @Published var showUsbInfo = false
 
     var onPairingRequired: (() -> Void)?
     private var pairingCodeContinuation: CheckedContinuation<String, Never>?
@@ -354,7 +358,7 @@ final class SNDCPYEngine: ObservableObject {
 
     func sendPairingCode(_ code: String) async {
         guard let conn = connection else { return }
-        return await withCheckedContinuation { continuation in
+        await withCheckedContinuation { continuation in
             let data = "PAIR \(code)\n".data(using: .utf8)!
             conn.send(content: data, completion: .contentProcessed { [weak self] _ in
                 guard let self = self else {
@@ -390,7 +394,7 @@ final class SNDCPYEngine: ObservableObject {
                 let nonce = engine.clientNonce.base64EncodedString()
                 let hello = "HELLO SNDCPY \(pub) \(nonce)\n"
                 conn.send(content: hello.data(using: .utf8), completion: .contentProcessed { _ in
-                    engine.readTextLine { line in engine.handleHandshake(line) }
+                    engine.readTextLine { line in engine.handleHandshake(line) })
                 })
             case .failed(let e):
                 Task { @MainActor in
@@ -438,11 +442,7 @@ final class SNDCPYEngine: ObservableObject {
             deriveSession(serverPublicB64: parts[1])
             onPairingRequired?()
             Task { @MainActor in
-                guard let code = await self.waitForPairingCode(), !code.isEmpty else {
-                    self.state = .failed("Pairing code not provided")
-                    return
-                }
-                await self.sendPairingCode(code)
+                self.showPairingAlert = true
             }
         default:
             state = .failed(line)
@@ -544,6 +544,13 @@ final class SNDCPYEngine: ObservableObject {
     }
 }
 
+// MARK: - Liquid Glass style helpers
+struct LiquidGlassStyle {
+    static let glassBackground = Color("GlassBackground")
+    static let glassForeground = Color("GlassForeground")
+    static let glassAccent = Color("GlassAccent")
+}
+
 // MARK: - Content View
 struct ContentView: View {
     @StateObject private var engine = SNDCPYEngine()
@@ -553,9 +560,8 @@ struct ContentView: View {
     @State private var lastKeyboard = ""
     @State private var showPairing = false
     @State private var pairingInput = ""
-    @State private var showPairingBox = false
     @State private var discoveryStatus = "Searching…"
-    @State private var discoveredServers: [DiscoveryObserver.Discovered] = []
+    @State private var discoveredServers: [SNDCPYEngine.DiscoveryObserver.Discovered] = []
 
     private let discovery = DiscoveryObserver()
 
@@ -567,7 +573,7 @@ struct ContentView: View {
                     ScrollView {
                         LazyVStack {
                             ForEach(Array(discoveredServers.enumerated()), id: \.element.ip) { _, srv in
-                                Button("\(srv.name) @ \(srv.ip):\(srv.port)") {
+                                Button("\(srv.name) at \(srv.ip):\(srv.port)") {
                                     host = srv.ip
                                     port = srv.port
                                     engine.connect(host: srv.ip, port: srv.port)
@@ -602,23 +608,63 @@ struct ContentView: View {
                     .foregroundColor(.gray)
 
                 VStack(spacing: 8) {
-                        Text("Enter the 6-digit code shown on the server")
+                    // Pairing method selector - CODE and BLUETOOTH only for iOS (no USB)
+                    HStack(spacing: 4) {
+                        ForEach(SNDCPYEngine.PairingMethod.allCases.filter { $0 != .usb }) { method in
+                            Button(action: { engine.selectedPairingMethod = method }) {
+                                Text(method.rawValue)
+                                    .font(.system(size: 12, weight: engine.selectedPairingMethod == method ? .bold : .regular))
+                                    .padding(6)
+                                    .frame(maxWidth: .infinity)
+                                    .background(engine.selectedPairingMethod == method ? Color.blue : Color.gray.opacity(0.2))
+                                    .foregroundColor(engine.selectedPairingMethod == method ? .white : .primary)
+                                    .cornerRadius(6)
+                            }
+                        }
+                    }
+
+                    // Pairing UI based on selected method
+                    switch engine.selectedPairingMethod {
+                    case .bluetooth:
+                        HStack(spacing: 8) {
+                            TextField("Confirm code", text: $engine.bluetoothConfirmCode)
+                                .keyboardType(.numberPad)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 120)
+                            Button("Confirm") {
+                                // Both sides must have matching codes
+                                engine.pairingCode = engine.bluetoothConfirmCode
+                                engine.attemptPairing()
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    case .usb:
+                        Text("USB pairing - connect via USB cable")
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundColor(.blue)
+                            .padding(8)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(6)
+                    case .code:
                         HStack(spacing: 8) {
                             TextField("6-digit code", text: $pairingInput)
                                 .keyboardType(.numberPad)
                                 .textFieldStyle(.roundedBorder)
-                                .multilineTextAlignment(.center)
                                 .frame(width: 180)
                             Button("Pair") {
-                                engine.setPairingCode(pairingInput)
-                                pairingInput = ""
+                                engine.pairingCode = pairingInput
+                                engine.attemptPairing()
                             }
                             .buttonStyle(.borderedProminent)
                         }
                     }
-                    .padding(.horizontal)
+
+                    Text("Enter the 6-digit code shown on the server")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                        .padding(.top, 4)
+                }
+                .padding(.horizontal)
 
                 ZStack {
                     H264View(sink: engine.sink)
@@ -653,8 +699,13 @@ struct ContentView: View {
                     }
             }
             .navigationTitle("SNDCPY")
+            .alert("Pairing Required", isPresented: $engine.showPairingAlert) {
+                // Dynamic alert buttons based on method
+            } message: {
+                Text("Select pairing method")
+            }
             .onAppear {
-                engine.onPairingRequired = { DispatchQueue.main.async { showPairingBox = true } }
+                engine.onPairingRequired = { DispatchQueue.main.async { } }
                 discovery.onFound = { srv in
                     if !discoveredServers.contains(where: { $0.ip == srv.ip }) {
                         discoveredServers.append(srv)
@@ -665,6 +716,39 @@ struct ContentView: View {
             }
             .onDisappear {
                 discovery.stop()
+            }
+        }
+        .preferredColorScheme(/*@START_MENU_TOKEN@*/.dark/*@END_MENU_TOKEN@*/)
+    }
+}
+
+// MARK: - Engine Extension for pairing logic
+extension SNDCPYEngine {
+    func attemptPairing() {
+        switch selectedPairingMethod {
+        case .bluetooth:
+            // Bluetooth-style: both sides must have matching codes
+            if pairingCode == bluetoothConfirmCode && !pairingCode.isEmpty {
+                Task { @MainActor in
+                    await sendPairingCode(pairingCode)
+                }
+            } else {
+                state = .failed("Codes don't match")
+                showPairingAlert = false
+            }
+        case .usb:
+            // USB: just use the code directly
+            if !pairingCode.isEmpty {
+                Task { @MainActor in
+                    await sendPairingCode(pairingCode)
+                }
+            }
+        case .code:
+            // Code method: use the code directly (reverted from inline text box)
+            if !pairingCode.isEmpty {
+                Task { @MainActor in
+                    await sendPairingCode(pairingCode)
+                }
             }
         }
     }

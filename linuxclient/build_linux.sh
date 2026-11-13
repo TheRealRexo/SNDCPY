@@ -125,13 +125,6 @@ build_rpm() {
     local RPM_DIR="$(pwd)/dist/rpmbuild"
     mkdir -p "$RPM_DIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
-    # Install build dependencies (fuse3 provides libfuse.so.3, create symlink for libfuse.so.2)
-    sudo apt-get update -qq && sudo apt-get install -y python3 python3-pip rpm-build fuse3 2>/dev/null || true
-    # Create symlink for libfuse.so.2 if libfuse3.so.3 is available
-    if [ -f /usr/lib/x86_64-linux-gnu/libfuse3.so.3 ]; then
-        sudo ln -sf /usr/lib/x86_64-linux-gnu/libfuse3.so.3 /usr/lib/x86_64-linux-gnu/libfuse.so.2
-    fi
-
     # Create tarball with proper top-level directory for rpmbuild
     local TARBALL="$RPM_DIR/SOURCES/${PACKAGE_NAME}-${VERSION}.tar.gz"
     local TMPDIR=$(mktemp -d)
@@ -214,15 +207,15 @@ EOF
 - Initial release
 SPECEOF
 
-    # Substitute variables
-    sed -i \
-        -e "s|@PACKAGE_NAME@|${PACKAGE_NAME}|g" \
-        -e "s|@VERSION@|${VERSION}|g" \
-        -e "s|@LICENSE@|${LICENSE}|g" \
-        -e "s|@HOMEPAGE@|${HOMEPAGE}|g" \
-        -e "s|@DESCRIPTION@|${DESCRIPTION}|g" \
-        -e "s|@DATE@|$(date +"%a %b %d %Y")|g" \
-        "$RPM_DIR/SPECS/$PACKAGE_NAME.spec"
+    # Substitute variables (portable: write to temp file, then move)
+    local SPEC="$RPM_DIR/SPECS/$PACKAGE_NAME.spec"
+    python3 -c "
+import sys
+s = open(sys.argv[1]).read()
+for k,v in [('@PACKAGE_NAME@','${PACKAGE_NAME}'),('@VERSION@','${VERSION}'),('@LICENSE@','${LICENSE}'),('@HOMEPAGE@','${HOMEPAGE}'),('@DESCRIPTION@','${DESCRIPTION}'),('@DATE@','$(date +\"%a %b %d %Y\")')]:
+    s = s.replace(k,v)
+open(sys.argv[1]+'.tmp','w').write(s)
+" "$SPEC" && mv "${SPEC}.tmp" "$SPEC"
 
     # Build with --nodeps to skip dependency check (deps are satisfied on system)
     rpmbuild --define "_topdir $RPM_DIR" --nodeps -bb "$RPM_DIR/SPECS/$PACKAGE_NAME.spec"
@@ -273,9 +266,10 @@ EOF
     cp "$ICON_512" "$APPDIR/sndcpy.png"
 
     # Build AppImage (optional - requires FUSE)
-    if command -v appimagetool >/dev/null 2>&1; then
+    if command -v appimagetool >/dev/null 2>&1 || [ -f ~/bin/appimagetool ]; then
+        local APPIMAGETOOL=$(command -v appimagetool 2>/dev/null || echo "~/bin/appimagetool")
         # Try to build AppImage, but don't fail if FUSE is not available
-        if ARCH=x86_64 appimagetool "$APPDIR" "$APPIMAGE" 2>/dev/null; then
+        if ARCH=x86_64 "$APPIMAGETOOL" "$APPDIR" "$APPIMAGE" 2>/dev/null; then
             echo "Created $APPIMAGE"
         else
             echo "Warning: AppImage build failed (FUSE not available), skipping..."

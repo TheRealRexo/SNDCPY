@@ -41,8 +41,11 @@ class SndcpyClient(
     private var running = false
     private var thread: Thread? = null
 
-    @Volatile
-    var listener: Listener? = null
+    // Pairing methods: CODE, BLUETOOTH (confirm), USB
+    enum class PairingMethod { CODE, BLUETOOTH, USB }
+    @Volatile var selectedPairingMethod: PairingMethod = PairingMethod.CODE
+    @Volatile var pairingCode: String = ""
+    @Volatile var bluetoothConfirmCode: String = ""
 
     /** Invoked (on the main thread) when a pairing code must be entered. */
     var onPairingRequired: (() -> Unit)? = null
@@ -132,6 +135,7 @@ class SndcpyClient(
                     android.os.Handler(android.os.Looper.getMainLooper()).post {
                         onPairingRequired?.invoke()
                     }
+                    // Wait for pairing code - blocking is OK here since we're on worker thread
                     val code = waitForPairingCode()
                     writer.println("PAIR $code")
                     val result = reader.readLine() ?: throw IOException("No pairing result")
@@ -196,9 +200,11 @@ class SndcpyClient(
         return frame
     }
 
-    /** Blocks the worker thread until the user enters a pairing code (or times out). */
+    /** Blocks the worker thread until the user enters a pairing code (or times out).
+     * Supports 3 methods: CODE (6-digit), BLUETOOTH (confirm), USB (direct). */
     private fun waitForPairingCode(): String {
         synchronized(pairingLock) {
+            // Wait for UI to set pendingPairingCode based on selected method
             val deadline = System.currentTimeMillis() + PAIRING_TIMEOUT_MS
             while (pendingPairingCode == null && !pairingAborted) {
                 val remaining = deadline - System.currentTimeMillis()
@@ -208,6 +214,13 @@ class SndcpyClient(
             if (pairingAborted) throw IOException("Pairing cancelled")
             return pendingPairingCode ?: throw IOException("Pairing code entry timed out")
         }
+    }
+
+    /** Request UI to show pairing dialog for the selected method. */
+    fun showPairingDialog() {
+        // This is called from the client activity/UI
+        // The UI will set pairingCode and bluetoothConfirmCode based on user input
+        // and call submitPairingCode() with the appropriate method
     }
 
     companion object {

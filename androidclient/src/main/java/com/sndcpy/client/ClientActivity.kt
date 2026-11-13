@@ -3,10 +3,10 @@ package com.sndcpy.client
 import android.app.Activity
 import android.app.Dialog
 import android.content.Intent
-import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Toast
+import.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.sndcpy.client.R
 import java.net.InetSocketAddress
@@ -14,6 +14,7 @@ import java.net.InetSocketAddress
 /**
  * Full SNDCPY client: LAN discovery, secure pairing, H.264 video,
  * multi-touch input and keyboard passthrough.
+ * Supports 3 pairing methods: CODE, BLUETOOTH (mutual confirmation), USB.
  */
 class ClientActivity : AppCompatActivity() {
 
@@ -27,11 +28,23 @@ class ClientActivity : AppCompatActivity() {
     private lateinit var homeButton: Button
     private lateinit var backButton: Button
     private lateinit var recentsButton: Button
-    private lateinit var statusTextView: android.widget.TextView
+    private lateinit var statusTextView: TextView
     private lateinit var touchSurfaceView: TouchSurfaceView
     private lateinit var videoSurfaceView: VideoSurfaceView
+
+    // Pairing method selector
+    private lateinit var methodCodeBtn: Button
+    private lateinit var methodBluetoothBtn: Button
+    private lateinit var methodUsbBtn: Button
+    private var selectedMethod: SndcpyClient.PairingMethod = SndcpyClient.PairingMethod.CODE
+
+    // Code method UI
     private lateinit var pairingCodeEditText: EditText
     private lateinit var sendPairingCodeButton: Button
+
+    // Bluetooth method UI
+    private lateinit var bluetoothConfirmEditText: EditText
+    private lateinit var bluetoothConfirmButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,13 +60,27 @@ class ClientActivity : AppCompatActivity() {
         statusTextView = findViewById(R.id.statusTextView)
         touchSurfaceView = findViewById(R.id.touchSurfaceView)
         videoSurfaceView = findViewById(R.id.videoSurfaceView)
+
+        // Pairing method selector buttons
+        methodCodeBtn = findViewById(R.id.methodCodeBtn)
+        methodBluetoothBtn = findViewById(R.id.methodBluetoothBtn)
+        methodUsbBtn = findViewById(R.id.methodUsbBtn)
+
+        // Code method UI (always visible by default)
         pairingCodeEditText = findViewById(R.id.pairingCodeEditText)
         sendPairingCodeButton = findViewById(R.id.sendPairingCodeButton)
+
+        // Bluetooth method UI
+        bluetoothConfirmEditText = findViewById(R.id.bluetoothConfirmEditText)
+        bluetoothConfirmButton = findViewById(R.id.bluetoothConfirmButton)
+
+        // Initialize method selector - highlight default (Code)
+        selectMethod(SndcpyClient.PairingMethod.CODE)
 
         hostEditText.setText("192.168.1.42")
         portEditText.setText("27183")
 
-        // Touch surface → encrypted control commands.
+        // Touch surface to encrypted control commands.
         touchSurfaceView.listener = object : TouchSurfaceView.Listener {
             override fun onPointerDown(pointerId: Int, x: Float, y: Float) {
                 client?.sendControl("POINTER_DOWN $pointerId $x $y")
@@ -74,6 +101,10 @@ class ClientActivity : AppCompatActivity() {
             pairingCodeEditText.text.clear()
         }
 
+        methodCodeBtn.setOnClickListener { selectMethod(SndcpyClient.PairingMethod.CODE) }
+        methodBluetoothBtn.setOnClickListener { selectMethod(SndcpyClient.PairingMethod.BLUETOOTH) }
+        methodUsbBtn.setOnClickListener { selectMethod(SndcpyClient.PairingMethod.USB) }
+
         connectButton.setOnClickListener { startConnect() }
         disconnectButton.setOnClickListener { disconnect() }
         homeButton.setOnClickListener { client?.sendControl("HOME") }
@@ -81,6 +112,39 @@ class ClientActivity : AppCompatActivity() {
         recentsButton.setOnClickListener { client?.sendControl("RECENTS") }
 
         startDiscovery()
+    }
+
+    private fun selectMethod(method: SndcpyClient.PairingMethod) {
+        selectedMethod = method
+        // Update button visual states
+        methodCodeBtn.isChecked = (method == SndcpyClient.PairingMethod.CODE)
+        methodBluetoothBtn.isChecked = (method == SndcpyClient.PairingMethod.BLUETOOTH)
+        methodUsbBtn.isChecked = (method == SndcpyClient.PairingMethod.USB)
+
+        // Hide all method-specific UI
+        pairingCodeEditText.isVisible = false
+        sendPairingCodeButton.isVisible = false
+        bluetoothConfirmEditText.isVisible = false
+        bluetoothConfirmButton.isVisible = false
+
+        // Show the appropriate UI for selected method
+        when (method) {
+            SndcpyClient.PairingMethod.CODE -> {
+                pairingCodeEditText.isVisible = true
+                sendPairingCodeButton.isVisible = true
+                pairingCodeEditText.hint = "Enter 6-digit pairing code"
+            }
+            SndcpyClient.PairingMethod.BLUETOOTH -> {
+                bluetoothConfirmEditText.isVisible = true
+                bluetoothConfirmButton.isVisible = true
+                bluetoothConfirmEditText.hint = "Enter 6-digit confirm code"
+            }
+            SndcpyClient.PairingMethod.USB -> {
+                // USB: just use the code directly, no UI needed beyond code entry
+                // Show info that USB pairing is selected
+                statusTextView.text = "USB pairing selected - connect device via USB cable"
+            }
+        }
     }
 
     private fun startDiscovery() {
@@ -104,13 +168,22 @@ class ClientActivity : AppCompatActivity() {
             return
         }
 
-        val c = SndcpyClient(host, port)
-        client = c
-        c.onPairingRequired = {
+        client = SndcpyClient(host, port)
+        client?.onPairingRequired = {
             runOnUiThread {
-                pairingCodeEditText.visibility = android.view.View.VISIBLE
-                sendPairingCodeButton.visibility = android.view.View.VISIBLE
-                pairingCodeEditText.hint = "Enter 6-digit pairing code"
+                // Show pairing method selector when server requires pairing
+                // Keep current method selected, just make UI visible
+                selectMethod(selectedMethod)
+                // For Code method, show the code entry field
+                if (selectedMethod == SndcpyClient.PairingMethod.CODE) {
+                    pairingCodeEditText.visibility = View.VISIBLE
+                    sendPairingCodeButton.visibility = View.VISIBLE
+                }
+                // For Bluetooth, show confirm code field
+                if (selectedMethod == SndcpyClient.PairingMethod.BLUETOOTH) {
+                    bluetoothConfirmEditText.visibility = View.VISIBLE
+                    bluetoothConfirmButton.visibility = View.VISIBLE
+                }
             }
         }
         c.connect()
