@@ -1,7 +1,7 @@
 [!WARNING]
 **This GitHub repo** (<https://github.com/TheRealRexo/SNDCPY>) **is the only official source for SNDCPY. Do not download releases from random websites.**
 
-# SNDCPY (v1.0.1)
+# SNDCPY (v1.0.0)
 
 <img src="androidserver/app/src/main/res/mipmap-hdpi/ic_launcher.png" width="128" height="128" alt="SNDCPY" align="right" />
 
@@ -9,12 +9,12 @@ _pronounced "**s**ou**nd** **c**o**py"_
 
 SNDCPY mirrors Android devices (video and audio) over Wi-Fi and allows control with a keyboard and mouse. Inspired by [scrcpy](https://github.com/Genymobile/scrcpy), it is built from scratch for low-latency, production-grade remote control on a local network.
 
-[![Android Server](https://img.shields.io/badge/Android%20Server-1.0.1-brightgreen?style=for-the-badge&logo=android)](androidserver/)&nbsp;
-[![Android Client](https://img.shields.io/badge/Android%20Client-1.0.1-blue?style=for-the-badge&logo=android)](androidclient/)&nbsp;
-[![iOS Client](https://img.shields.io/badge/iOS%20Client-1.0.1-black?style=for-the-badge&logo=apple)](iosclient/)&nbsp;
-[![macOS Client](https://img.shields.io/badge/macOS%20Client-1.0.1-black?style=for-the-badge&logo=apple)](linuxclient/)&nbsp;
-[![Linux Client](https://img.shields.io/badge/Linux%20Client-1.0.1-orange?style=for-the-badge&logo=linux)](linuxclient/)&nbsp;
-[![Windows Client](https://img.shields.io/badge/Windows%20Client-1.0.1-blue?style=for-the-badge&logo=windows)](windowsclient/)&nbsp;
+[![Android Server](https://img.shields.io/badge/Android%20Server-1.0.0-brightgreen?style=for-the-badge&logo=android)](androidserver/)&nbsp;
+[![Android Client](https://img.shields.io/badge/Android%20Client-1.0.0-blue?style=for-the-badge&logo=android)](androidclient/)&nbsp;
+[![iOS Client](https://img.shields.io/badge/iOS%20Client-1.0.0-black?style=for-the-badge&logo=apple)](iosclient/)&nbsp;
+[![macOS Client](https://img.shields.io/badge/macOS%20Client-1.0.0-black?style=for-the-badge&logo=apple)](linuxclient/)&nbsp;
+[![Linux Client](https://img.shields.io/badge/Linux%20Client-1.0.0-orange?style=for-the-badge&logo=linux)](linuxclient/)&nbsp;
+[![Windows Client](https://img.shields.io/badge/Windows%20Client-1.0.0-blue?style=for-the-badge&logo=windows)](windowsclient/)&nbsp;
 
 It focuses on:
 
@@ -77,11 +77,11 @@ client.connect()
 
 ```bash
 # Apple Silicon
-unzip SNDCPY-macos-1.0.1-arm64.zip
+unzip SNDCPY-macos-1.0.0-arm64.zip
 ./SNDCPY-macos-arm64 --host 192.168.1.42
 
 # Intel
-unzip SNDCPY-macos-1.0.1-x86_64.zip
+unzip SNDCPY-macos-1.0.0-x86_64.zip
 ./SNDCPY-macos-x86_64 --host 192.168.1.42
 ```
 
@@ -113,12 +113,12 @@ On some devices (notably Xiaomi) you may need to enable **USB debugging (Securit
 - [Android Server](androidserver/) — APK from Releases or `assembleRelease`
 - [Android Client](androidclient/) — APK from Releases or `assembleRelease`
 - [iOS Client](iosclient/) — Unsigned device IPA for iPhone/iPad, built in Xcode
-- [macOS Client](linuxclient/) — Standalone binary for Apple Silicon (`SNDCPY-macos-1.0.1-arm64.zip`) and Intel (`SNDCPY-macos-1.0.1-x86_64.zip`), built with PyInstaller
+- [macOS Client](linuxclient/) — Standalone binary for Apple Silicon (`SNDCPY-macos-1.0.0-arm64.zip`) and Intel (`SNDCPY-macos-1.0.0-x86_64.zip`), built with PyInstaller
 - [Linux Client](linuxclient/) — `sndcpy_client.py` + `.deb`, `.AppImage`, `.rpm` packages
 - [Windows Client](windowsclient/) — `sndcpy_client.py` + `.exe` installer
 - [Flatpak](flatpak/) — Flathub-ready manifest (`flatpak install flatpak/flatpakref/SNDCPY.flatpakref`)
 
-Prebuilt `1.0.1` artifacts are on the [Releases](https://github.com/TheRealRexo/SNDCPY/releases) page.
+Prebuilt `1.0.0` artifacts are on the [Releases](https://github.com/TheRealRexo/SNDCPY/releases) page.
 
 ## Must-Know Tips
 
@@ -203,7 +203,7 @@ Each folder is an independent build:
 | `linuxclient` | `pip install -r linuxclient/requirements.txt && python3 linuxclient/sndcpy_client.py --help` |
 | `windowsclient` | `py -3 windowsclient/sndcpy_client.py --help` |
 
-## Pairing Methods (v1.0.1)
+## Pairing Methods (v1.0.0)
 
 SNDCPY now supports exactly **3 pairing methods**, selectable from the client UI:
 

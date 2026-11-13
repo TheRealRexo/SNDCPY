@@ -1,8 +1,8 @@
-# SNDCPY Linux Client (v1.0.1)
+# SNDCPY Linux Client (v1.0.0)
 
 Cross-platform Python client for SNDCPY — connects to the server on port 27183 and handles remote input.
 
-> **Status:** 1.0.1 — official release. Built with Python 3.10+ and `cryptography` library.
+> **Status:** 1.0.0 — official release. Built with Python 3.10+ and `cryptography` library.
 
 ## Build
 
@@ -20,7 +20,7 @@ Packages: `cryptography`, `PyQt6` (for GUI clients).
 python3 sndcpy_client.py --host 192.168.1.42
 ```
 
-## Pairing Methods (v1.0.1)
+## Pairing Methods (v1.0.0)
 
 Three pairing methods are supported:
 

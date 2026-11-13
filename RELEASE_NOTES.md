@@ -1,4 +1,4 @@
-# SNDCPY 1.0.1 — Official Release
+# SNDCPY 1.0.0 — Official Release
 
 > The first production-ready release of SNDCPY with exactly 3 pairing methods, light/dark themes, Android server icon, and APK self-update — all built locally.
 
@@ -6,7 +6,7 @@
 
 This release introduces **exactly 3 pairing methods** across all platforms, plus numerous quality-of-life improvements:
 
-### Pairing Methods (v1.0.1)
+### Pairing Methods (v1.0.0)
 
 SNDCPY now supports exactly **3 pairing methods**, selectable from the client UI:
 
@@ -35,11 +35,11 @@ SNDCPY now supports exactly **3 pairing methods**, selectable from the client UI
 
 | Component | Version | Artifact |
 |-----------|---------|----------|
-| **Android Server** | 1.0.1 | `SNDCPY-Server-1.0.1.apk` |
-| **Android Client** | 1.0.1 | `SNDCPY-Client-1.0.1.apk` |
-| **iOS Client** | 1.0.1 | `SNDCPY-iOS-1.0.1.ipa` |
-| **Linux Client** | 1.0.1 | `sndcpy-client_1.0.1_all.deb`, `sndcpy-client-1.0.1-1.noarch.rpm`, `SNDCPY-1.0.1-x86_64.AppImage` |
-| **Windows Client** | 1.0.1 | `SNDCPY-1.0.1-portable.zip`, `SNDCPY-1.0.1-setup.exe`, `SNDCPY-1.0.1.exe` |
+| **Android Server** | 1.0.0 | `SNDCPY-Server-1.0.0.apk` |
+| **Android Client** | 1.0.0 | `SNDCPY-Client-1.0.0.apk` |
+| **iOS Client** | 1.0.0 | `SNDCPY-iOS-1.0.0.ipa` |
+| **Linux Client** | 1.0.0 | `sndcpy-client_1.0.0_all.deb`, `sndcpy-client-1.0.0-1.noarch.rpm`, `SNDCPY-1.0.0-x86_64.AppImage` |
+| **Windows Client** | 1.0.0 | `SNDCPY-1.0.0-portable.zip`, `SNDCPY-1.0.0-setup.exe`, `SNDCPY-1.0.0.exe` |
 
 ## Key Features
 
@@ -105,14 +105,14 @@ encrypted frames [u32 len][12B IV][ciphertext]
 ### Android Server
 
 ```bash
-adb install SNDCPY-Server-1.0.1.apk
+adb install SNDCPY-Server-1.0.0.apk
 # Open app → Issue pairing code → Start screen share
 ```
 
 ### Android Client
 
 ```bash
-adb install SNDCPY-Client-1.0.1.apk
+adb install SNDCPY-Client-1.0.0.apk
 ```
 
 ### iOS
@@ -127,25 +127,25 @@ open iosclient/SNDCPYClient.xcodeproj
 
 ```bash
 # Debian/Ubuntu
-sudo dpkg -i sndcpy-client_1.0.1_all.deb
+sudo dpkg -i sndcpy-client_1.0.0_all.deb
 # Fedora/RHEL
-sudo rpm -i sndcpy-client-1.0.1-1.noarch.rpm
+sudo rpm -i sndcpy-client-1.0.0-1.noarch.rpm
 # Universal
-chmod +x SNDCPY-1.0.1-x86_64.AppImage && ./SNDCPY-1.0.1-x86_64.AppImage --host 192.168.1.42
+chmod +x SNDCPY-1.0.0-x86_64.AppImage && ./SNDCPY-1.0.0-x86_64.AppImage --host 192.168.1.42
 ```
 
 ### Windows
 
 ```powershell
 # Portable
-unzip SNDCPY-1.0.1-portable.zip
+unzip SNDCPY-1.0.0-portable.zip
 SNDCPY.bat --host 192.168.1.42
 
 # Installer
-SNDCPY-1.0.1-setup.exe
+SNDCPY-1.0.0-setup.exe
 
 # Standalone exe
-SNDCPY-1.0.1.exe --host 192.168.1.42
+SNDCPY-1.0.0.exe --host 192.168.1.42
 ```
 
 ## Known Issues

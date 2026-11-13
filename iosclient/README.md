@@ -1,8 +1,8 @@
-# SNDCPY iOS Client (v1.0.1)
+# SNDCPY iOS Client (v1.0.0)
 
 iOS client for SNDCPY — connects to the SNDCPY server on port 27183 and sends remote input commands.
 
-> **Status:** 1.0.1 — official release. Built with Xcode 16.4, SwiftUI interface.
+> **Status:** 1.0.0 — official release. Built with Xcode 16.4, SwiftUI interface.
 
 ## Build
 
@@ -24,7 +24,7 @@ Requires Xcode 16.4+, iOS 16.0+.
    - **USB**: filtered out (desktop only feature)
 4. Send commands via the touch interface or hardware keyboard.
 
-## Pairing Methods (v1.0.1)
+## Pairing Methods (v1.0.0)
 
 Three pairing methods are supported:
 

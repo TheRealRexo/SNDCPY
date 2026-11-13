@@ -1,7 +1,7 @@
-# SNDCPY – Android Remote Control (v1.0.1)
+# SNDCPY – Android Remote Control (v1.0.0)
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Version](https://img.shields.io/badge/version-1.0.1-brightgreen.svg)](https://github.com/TheRealRexo/SNDCPY/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg)](https://github.com/TheRealRexo/SNDCPY/releases)
 [![Platform](https://img.shields.io/badge/platform-android-green.svg)](https://developer.android.com)
 [![Twitter](https://img.shields.io/twitter/url/https/?label=%23Android%20&style=social)](https://twitter.com/intent/tweet?text=Check%20out%20SNDCPY%20%23Android%20Remote%20Control)
 

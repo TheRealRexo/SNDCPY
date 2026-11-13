@@ -1,8 +1,8 @@
-# SNDCPY Android Client (v1.0.1)
+# SNDCPY Android Client (v1.0.0)
 
 Android client for SNDCPY — connects to the SNDCPY server on port 27183 and sends remote input commands.
 
-> **Status:** 1.0.1 — official release. Progression `0.1.0-beta-ANDROIDCLIENT` → `1.0.1-beta-ANDROIDCLIENT` validated the wire protocol and all 3 pairing methods.
+> **Status:** 1.0.0 — official release. Progression `0.1.0-beta-ANDROIDCLIENT` → `1.0.0-beta-ANDROIDCLIENT` validated the wire protocol and all 3 pairing methods.
 
 ## Build
 
@@ -36,7 +36,7 @@ BACK
 
 See `../androidserver/README.md` for the full command grammar.
 
-## Pairing Methods (v1.0.1)
+## Pairing Methods (v1.0.0)
 
 Three pairing methods are supported:
 

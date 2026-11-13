@@ -31,7 +31,7 @@ ERROR <message>
 
 When `PAIRING_REQUIRED`, the client shows a pairing method selector with 3 options:
 
-### Pairing Methods (v1.0.1)
+### Pairing Methods (v1.0.0)
 
 Three pairing methods are available, selectable from the client connection UI:
 
