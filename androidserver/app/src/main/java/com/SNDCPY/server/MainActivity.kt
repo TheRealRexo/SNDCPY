@@ -84,7 +84,7 @@ class MainActivity : AppCompatActivity() {
     private fun showPromptPairingDialog(fingerprint: String, runtime: RemoteControlRuntime) {
         val pairingManager = runtime.pairingManager
         runOnUiThread {
-            android.app.AlertDialog(this).Builder(this)
+            AlertDialog.Builder(this)
                 .setTitle("Pairing Request")
                 .setMessage("New device wants to pair.\nFingerprint: ${fingerprint.take(16)}…")
                 .setPositiveButton("Allow") { _, _ -> pairingManager.approvePromptPairing() }
