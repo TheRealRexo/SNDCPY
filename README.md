@@ -1,11 +1,11 @@
-[!WARNING]
+WARNING:
 **This GitHub repo** (<https://github.com/TheRealRexo/SNDCPY>) **is the only official source for SNDCPY. Do not download releases from random websites.**
 
 # SNDCPY (v1.0.0)
 
 <img src="androidserver/app/src/main/res/mipmap-hdpi/ic_launcher.png" width="128" height="128" alt="SNDCPY" align="right" />
 
-_pronounced "**s**ou**nd** **c**o**py"_
+_pronounced "**s**ou**nd** **c**o**py**"_
 
 SNDCPY mirrors Android devices (video and audio) over Wi-Fi and allows control with a keyboard and mouse. Inspired by [scrcpy](https://github.com/Genymobile/scrcpy), it is built from scratch for low-latency, production-grade remote control on a local network.
 
