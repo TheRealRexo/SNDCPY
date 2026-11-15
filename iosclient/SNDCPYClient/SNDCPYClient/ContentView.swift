@@ -343,25 +343,17 @@ final class SNDCPYEngine: ObservableObject {
     @Published var showUsbDialog = false
     // Text field bindings for dialogs
     @Published var codeInputText: String = ""
-    @Published var bluetoothConfirmInput: String = ""
 
-    func submitCode(_ text: String) {
-        codeInputText = text
-        if selectedPairingMethod == .bluetooth {
-            attemptBluetoothSend()
-        } else {
-            attemptCodeSend()
-        }
+    func submitCode() {
+        attemptCodeSend()
     }
 
-    func submitBluetoothConfirm(_ text: String) {
-        bluetoothConfirmInput = text
+    func submitBluetoothConfirm() {
         attemptBluetoothSend()
     }
 
     func cancelPairing() {
         codeInputText = ""
-        bluetoothConfirmInput = ""
         showCodeDialog = false
         showBluetoothDialog = false
         showUsbDialog = false
@@ -549,10 +541,8 @@ final class SNDCPYEngine: ObservableObject {
     // ── Bluetooth method: send PAIR PROMPT → wait for PROMPT_APPROVED/REJECTED
     //                             → if approved, send PAIR CONFIRM → wait for PAIRED ──
     func attemptBluetoothSend() {
-        let code = bluetoothConfirmInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !code.isEmpty else { return }
-        showBluetoothDialog = false
         guard let conn = connection else { return }
+        showBluetoothDialog = false
         // Step 1: Send PAIR PROMPT
         let promptData = "PAIR PROMPT\n".data(using: .utf8)!
         conn.send(content: promptData, completion: .contentProcessed { [weak self] _ in
@@ -561,7 +551,7 @@ final class SNDCPYEngine: ObservableObject {
                 self.readTextLine { response in
                     let resp = response.trimmingCharacters(in: .whitespacesAndNewlines)
                     if resp == "PROMPT_APPROVED" {
-                        // Step 2: Server approved — send PAIR CONFIRM with the code
+                        // Step 2: Server approved — send PAIR CONFIRM
                         let confirmData = "PAIR CONFIRM\n".data(using: .utf8)!
                         conn.send(content: confirmData, completion: .contentProcessed { [weak self] _ in
                             guard let self = self else { return }
@@ -760,7 +750,7 @@ struct ContentView: View {
             HStack(spacing: 12) {
                 Button("Cancel Pairing") { engine.cancelPairing() }
                     .buttonStyle(.bordered)
-                Button("Confirm Code") { engine.submitCode("") }
+                Button("Confirm Code") { engine.submitCode() }
                     .buttonStyle(.borderedProminent)
             }
         }
@@ -776,15 +766,14 @@ struct ContentView: View {
             Text(subtitle)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
-            TextField("Confirm code", text: $engine.bluetoothConfirmInput)
-                .keyboardType(.numberPad)
-                .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 200)
-                .autocorrectionDisabled()
+            Text("Approve the connection on the server device to complete pairing.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
             HStack(spacing: 12) {
                 Button("Cancel Connection") { engine.cancelPairing() }
                     .buttonStyle(.bordered)
-                Button("Confirm Code") { engine.submitBluetoothConfirm("") }
+                Button("Confirm Pairing") { engine.submitBluetoothConfirm() }
                     .buttonStyle(.borderedProminent)
             }
         }
