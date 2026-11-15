@@ -162,6 +162,19 @@ def discover_servers(timeout: float = 5.0, iface: str | None = None):
     return list(discovered.values())
 
 
+def _read_line(sock) -> str:
+    """Read a single newline-terminated line from the socket."""
+    buf = b""
+    while True:
+        chunk = sock.recv(1)
+        if not chunk:
+            break
+        buf += chunk
+        if chunk == b"\n":
+            break
+    return buf.decode(errors="replace").strip()
+
+
 # ── Handshake helpers ────────────────────────────────────────────────────────
 
 def build_hello(client_public_b64: str, client_nonce_b64: str) -> bytes:
@@ -188,6 +201,8 @@ def main():
     parser.add_argument("--host", required=True, help="Server IP")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Server port (default 27183)")
     parser.add_argument("--pair-code", help="6-digit pairing code (first connect)")
+    parser.add_argument("--pair-method", choices=["code", "bluetooth"], default="code",
+                        help="Pairing method: code (default) or bluetooth (mutual confirm)")
     parser.add_argument("--discover", action="store_true", help="Discover servers via LAN beacon")
     args = parser.parse_args()
 
@@ -275,18 +290,34 @@ def main():
         print("[legacy] no session key (plain-text mode or crypto unavailable)")
 
     # ── Pairing ──
-    if status == "PAIRING_REQUIRED" and args.pair_code:
-        sock.sendall(f"PAIR {args.pair_code}\n".encode())
-        print(f">> PAIR {args.pair_code}")
-    elif status == "PAIRING_REQUIRED":
-        print("Server requires pairing. Use --pair-code <6-digit>.")
-        # Simple interactive loop for demo:
-        try:
-            code = input("Enter pairing code: ").strip()
-            sock.sendall(f"PAIR {code}\n".encode())
-            print(f">> PAIR {code}")
-        except (KeyboardInterrupt, EOFError):
-            pass
+    if status == "PAIRING_REQUIRED":
+        pairing_method = args.pair_method or "code"
+        if pairing_method == "bluetooth":
+            # Bluetooth handshake: PAIR PROMPT -> wait PROMPT_APPROVED -> PAIR CONFIRM -> wait PAIRED
+            sock.sendall(b"PAIR PROMPT\n")
+            print(">> PAIR PROMPT")
+            resp = _read_line(sock).strip()
+            print(f"<< {resp}")
+            if resp == "PROMPT_APPROVED":
+                code = input("Enter the confirm code: ").strip()
+                sock.sendall(b"PAIR CONFIRM\n")
+                print(">> PAIR CONFIRM")
+                resp = _read_line(sock).strip()
+                print(f"<< {resp}")
+                if resp != "PAIRED":
+                    print(f"[error] Pairing failed: {resp}")
+            elif resp == "REJECTED":
+                print("[error] Pairing rejected by server")
+            else:
+                print(f"[error] Unexpected response: {resp}")
+        else:
+            if args.pair_code:
+                sock.sendall(f"PAIR {args.pair_code}\n".encode())
+                print(f">> PAIR {args.pair_code}")
+            else:
+                code = input("Enter pairing code: ").strip()
+                sock.sendall(f"PAIR {code}\n".encode())
+                print(f">> PAIR {code}")
 
     # ── Command loop ──
     print("Commands: HOME | BACK | RECENTS | PING | TEXT:<msg>")

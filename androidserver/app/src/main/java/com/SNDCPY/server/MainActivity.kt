@@ -155,9 +155,10 @@ class MainActivity : AppCompatActivity() {
             AlertDialog.Builder(this)
                 .setTitle("Pairing Code")
                 .setMessage("Enter this code on your client device:")
-                .setSingleChoiceItems(arrayOf(code), -1) { _, _ -> }
-                .setPositiveButton("Dismiss") { d, _ -> d.dismiss() }
-                .setCancelable(false)
+                .setMessage("Enter this code on your client device:\n\n     $code     ")
+                .setNeutralButton("Dismiss") { d, _ -> d.dismiss() }
+                .setCancelable(true)
+                .setOnCancelListener { it.dismiss() }
                 .show()
         }
     }

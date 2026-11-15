@@ -513,7 +513,7 @@ class SNDCPYWindow(QMainWindow):
         self.method_usb_btn.toggled.connect(lambda checked, m="USB": self._on_method_toggled(checked, m))
         layout.addWidget(method_group)
 
-        # ---- Code method row: 6-digit code entry ----
+        # ---- Code method row: permanently hidden — pairing uses dialogs only ----
         self.pairing_row_widget = QWidget()
         self.pairing_row = QHBoxLayout(self.pairing_row_widget)
         pairing_label = QLabel("Pairing code:")
@@ -530,9 +530,10 @@ class SNDCPYWindow(QMainWindow):
         self.pairing_row.addWidget(self.pairing_code_edit)
         self.pairing_row.addWidget(self.send_pairing_btn)
         self.pairing_row.addStretch(1)
+        self.pairing_row_widget.setVisible(False)
         layout.addWidget(self.pairing_row_widget)
 
-        # ---- Bluetooth method row: mutual confirmation ----
+        # ---- Bluetooth method row: permanently hidden — pairing uses dialogs only ----
         self.bluetooth_row_widget = QWidget()
         self.bluetooth_row = QHBoxLayout(self.bluetooth_row_widget)
         self.bluetooth_confirm_edit = QLineEdit()
@@ -548,6 +549,7 @@ class SNDCPYWindow(QMainWindow):
         self.bluetooth_row.addWidget(self.bluetooth_confirm_edit)
         self.bluetooth_row.addWidget(self.bluetooth_confirm_btn)
         self.bluetooth_row.addStretch(1)
+        self.bluetooth_row_widget.setVisible(False)
         layout.addWidget(self.bluetooth_row_widget)
 
         # Show the row matching the default method (Code)
@@ -695,19 +697,10 @@ class SNDCPYWindow(QMainWindow):
         if not checked:
             return
         self._selected_method = method
-        # Hide all method-specific rows
+        # All pairing input rows are permanently hidden — pairing uses dialogs only.
         self.pairing_row_widget.setVisible(False)
         self.bluetooth_row_widget.setVisible(False)
-
-        # Show the appropriate row based on selected method
-        if method == "Code":
-            self.pairing_row_widget.setVisible(True)
-            self._log("Pairing method: Code (enter 6-digit code)")
-        elif method == "Bluetooth":
-            self.bluetooth_row_widget.setVisible(True)
-            self._log("Pairing method: Bluetooth (mutual confirmation)")
-        elif method == "USB":
-            self._log("Pairing method: USB (desktop only - connect cable)")
+        self._log(f"Pairing method: {method} (modal dialog)")
 
     def _confirm_bluetooth(self):
         """Handle Bluetooth-style mutual confirmation."""
