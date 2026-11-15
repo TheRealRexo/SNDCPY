@@ -337,54 +337,34 @@ final class SNDCPYEngine: ObservableObject {
     }
 
     @Published var selectedPairingMethod: PairingMethod = .code
-    @Published var showPairingAlert = false
-    @Published var pairingCode: String = ""
-    @Published var bluetoothConfirmCode: String = ""
-    @Published var showUsbInfo = false
+    // Dialog state — shown only when pairing is actually required
+    @Published var showCodeDialog = false
+    @Published var showBluetoothDialog = false
+    @Published var showUsbDialog = false
+    // Text field bindings for dialogs
+    @Published var codeInputText: String = ""
+    @Published var bluetoothConfirmInput: String = ""
 
-    var onPairingRequired: (() -> Void)?
-    private var pairingCodeContinuation: CheckedContinuation<String, Never>?
-
-    func setPairingCode(_ code: String) {
-        pairingCodeContinuation?.resume(returning: code)
-        pairingCodeContinuation = nil
-    }
-
-    func waitForPairingCode() async -> String? {
-        await withCheckedContinuation { continuation in
-            pairingCodeContinuation = continuation
+    func submitCode(_ text: String) {
+        codeInputText = text
+        if selectedPairingMethod == .bluetooth {
+            attemptBluetoothSend()
+        } else {
+            attemptCodeSend()
         }
     }
 
-    func sendPairingCode(_ code: String) async {
-        guard let conn = connection else { return }
-        await withCheckedContinuation { continuation in
-            let data = "PAIR \(code)\n".data(using: .utf8)!
-            conn.send(content: data, completion: .contentProcessed { [weak self] _ in
-                guard let self = self else {
-                    continuation.resume()
-                    return
-                }
-                Task { @MainActor in
-                    self.readTextLine { resp in
-                        if resp.trimmingCharacters(in: .whitespaces) == "PAIRED" {
-                            self.finishConnect()
-                        } else {
-                            self.state = .failed("Pairing rejected")
-                        }
-                        continuation.resume()
-                    }
-                }
-            })
-        }
+    func submitBluetoothConfirm(_ text: String) {
+        bluetoothConfirmInput = text
+        attemptBluetoothSend()
     }
 
-    /// Called by the server when it requires pairing. Shows the method selector.
-    func requestPairing() {
-        onPairingRequired?()
-        Task { @MainActor in
-            self.showPairingAlert = true
-        }
+    func cancelPairing() {
+        codeInputText = ""
+        bluetoothConfirmInput = ""
+        showCodeDialog = false
+        showBluetoothDialog = false
+        showUsbDialog = false
     }
 
     func connect(host: String, port: UInt16) {
@@ -448,9 +428,13 @@ final class SNDCPYEngine: ObservableObject {
         case "PAIRING_REQUIRED":
             serverNonce = Data(base64Encoded: parts[2]) ?? Data()
             deriveSession(serverPublicB64: parts[1])
-            onPairingRequired?()
+            // Show the dialog matching the selected method (only when user is ready)
             Task { @MainActor in
-                self.showPairingAlert = true
+                switch selectedPairingMethod {
+                case .code:     showCodeDialog = true
+                case .bluetooth: showBluetoothDialog = true
+                case .usb:      showUsbDialog = true
+                }
             }
         default:
             state = .failed(line)
@@ -541,22 +525,73 @@ final class SNDCPYEngine: ObservableObject {
         connection?.send(content: frame, completion: .contentProcessed { _ in })
     }
 
+    // ── Code method: send PAIR <code> and wait for PAIRED ───────────────────
+    func attemptCodeSend() {
+        let code = codeInputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !code.isEmpty else { return }
+        showCodeDialog = false
+        guard let conn = connection else { return }
+        let data = "PAIR \(code)\n".data(using: .utf8)!
+        conn.send(content: data, completion: .contentProcessed { [weak self] _ in
+            guard let self = self else { return }
+            Task { @MainActor in
+                self.readTextLine { resp in
+                    if resp.trimmingCharacters(in: .whitespacesAndNewlines) == "PAIRED" {
+                        self.finishConnect()
+                    } else {
+                        self.state = .failed("Pairing rejected by server")
+                    }
+                }
+            }
+        })
+    }
+
+    // ── Bluetooth method: send PAIR PROMPT → wait for PROMPT_APPROVED/REJECTED
+    //                             → if approved, send PAIR CONFIRM → wait for PAIRED ──
+    func attemptBluetoothSend() {
+        let code = bluetoothConfirmInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !code.isEmpty else { return }
+        showBluetoothDialog = false
+        guard let conn = connection else { return }
+        // Step 1: Send PAIR PROMPT
+        let promptData = "PAIR PROMPT\n".data(using: .utf8)!
+        conn.send(content: promptData, completion: .contentProcessed { [weak self] _ in
+            guard let self = self else { return }
+            Task { @MainActor in
+                self.readTextLine { response in
+                    let resp = response.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if resp == "PROMPT_APPROVED" {
+                        // Step 2: Server approved — send PAIR CONFIRM with the code
+                        let confirmData = "PAIR CONFIRM\n".data(using: .utf8)!
+                        conn.send(content: confirmData, completion: .contentProcessed { [weak self] _ in
+                            guard let self = self else { return }
+                            Task { @MainActor in
+                                self.readTextLine { result in
+                                    if result.trimmingCharacters(in: .whitespacesAndNewlines) == "PAIRED" {
+                                        self.finishConnect()
+                                    } else {
+                                        self.state = .failed("Pairing rejected by server")
+                                    }
+                                }
+                            }
+                        })
+                    } else if resp == "REJECTED" {
+                        self.state = .failed("Pairing rejected by server")
+                    } else {
+                        self.state = .failed("Unexpected response: \(resp)")
+                    }
+                }
+            }
+        })
+    }
+
     func disconnect() {
-        pairingCodeContinuation?.resume(returning: "")
-        pairingCodeContinuation = nil
         readFrames = false
         connection?.cancel()
         connection = nil
         sessionKey = nil
         state = .idle
     }
-}
-
-// MARK: - Liquid Glass style helpers
-struct LiquidGlassStyle {
-    static let glassBackground = Color("GlassBackground")
-    static let glassForeground = Color("GlassForeground")
-    static let glassAccent = Color("GlassAccent")
 }
 
 // MARK: - Content View
@@ -566,8 +601,6 @@ struct ContentView: View {
     @State private var port: UInt16 = 27183
     @State private var keyboardText = ""
     @State private var lastKeyboard = ""
-    @State private var showPairing = false
-    @State private var pairingInput = ""
     @State private var discoveryStatus = "Searching…"
     @State private var discoveredServers: [DiscoveryObserver.Discovered] = []
 
@@ -615,8 +648,8 @@ struct ContentView: View {
                     .font(.caption)
                     .foregroundColor(.gray)
 
-                VStack(spacing: 8) {
-                    // Pairing method selector - CODE and BLUETOOTH only for iOS (no USB)
+                // Pairing method selector — always visible for quick switching
+                VStack(spacing: 6) {
                     HStack(spacing: 4) {
                         ForEach(SNDCPYEngine.PairingMethod.allCases.filter { $0 != .usb }) { method in
                             Button(action: { engine.selectedPairingMethod = method }) {
@@ -631,46 +664,11 @@ struct ContentView: View {
                         }
                     }
 
-                    // Pairing UI based on selected method
-                    switch engine.selectedPairingMethod {
-                    case .bluetooth:
-                        HStack(spacing: 8) {
-                            TextField("Confirm code", text: $engine.bluetoothConfirmCode)
-                                .keyboardType(.numberPad)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 120)
-                            Button("Confirm") {
-                                // Both sides must have matching codes
-                                engine.pairingCode = engine.bluetoothConfirmCode
-                                engine.attemptPairing()
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-                    case .usb:
-                        Text("USB pairing - connect via USB cable")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                            .padding(8)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(6)
-                    case .code:
-                        HStack(spacing: 8) {
-                            TextField("6-digit code", text: $pairingInput)
-                                .keyboardType(.numberPad)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 180)
-                            Button("Pair") {
-                                engine.pairingCode = pairingInput
-                                engine.attemptPairing()
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
+                    if engine.state == .connected || engine.state.isConnected {
+                        Text("Mode: \(engine.selectedPairingMethod.rawValue)")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
                     }
-
-                    Text("Enter the 6-digit code shown on the server")
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                        .padding(.top, 4)
                 }
                 .padding(.horizontal)
 
@@ -707,21 +705,29 @@ struct ContentView: View {
                     }
             }
             .navigationTitle("SNDCPY")
-            .alert("Pairing Required", isPresented: $engine.showPairingAlert) {
-                Button("Choose Method", role: .cancel) {
-                    // Fall back to the default method if the user just dismisses
-                    if engine.state == .pairing {
-                        engine.showUsbInfo = false
-                    }
-                }
-            } message: {
-                Text("Select a pairing method below, enter the code, then tap Pair")
+
+            // ── Pairing dialog sheets (shown only when pairing is triggered) ──
+            .sheet(isPresented: $engine.showCodeDialog) {
+                pairingCodeSheet(title: "Enter Pairing Code", subtitle: "Enter the 6-digit code shown on the server")
             }
-            .onAppear {
-                engine.onPairingRequired = {
-                    // The inline selector below is the entry point; nothing to
-                    // do beyond showing the alert that pairing is required.
+            .sheet(isPresented: $engine.showBluetoothDialog) {
+                pairingBluetoothSheet(title: "Bluetooth Pairing", subtitle: "Server approved. Enter the confirm code to complete pairing.")
+            }
+            .sheet(isPresented: $engine.showUsbDialog) {
+                VStack(spacing: 16) {
+                    Text("USB Pairing")
+                        .font(.title2).bold()
+                    Text("USB is not available on iOS.\nPlease select \"Code\" or \"Bluetooth\" as your pairing method.")
+                        .font(.body)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                    Button("OK") { engine.showUsbDialog = false }
+                        .buttonStyle(.borderedProminent)
                 }
+                .padding()
+            }
+
+            .onAppear {
                 discovery.onFound = { srv in
                     if !discoveredServers.contains(where: { $0.ip == srv.ip }) {
                         discoveredServers.append(srv)
@@ -736,36 +742,52 @@ struct ContentView: View {
         }
         .preferredColorScheme(/*@START_MENU_TOKEN@*/.dark/*@END_MENU_TOKEN@*/)
     }
-}
 
-// MARK: - Engine Extension for pairing logic
-extension SNDCPYEngine {
-    func attemptPairing() {
-        switch selectedPairingMethod {
-        case .bluetooth:
-            // Bluetooth-style: both sides must have matching codes
-            if pairingCode == bluetoothConfirmCode && !pairingCode.isEmpty {
-                Task { @MainActor in
-                    await sendPairingCode(pairingCode)
-                }
-            } else {
-                state = .failed("Codes don't match")
-                showPairingAlert = false
-            }
-        case .usb:
-            // USB: just use the code directly
-            if !pairingCode.isEmpty {
-                Task { @MainActor in
-                    await sendPairingCode(pairingCode)
-                }
-            }
-        case .code:
-            // Code method: use the code directly
-            if !pairingCode.isEmpty {
-                Task { @MainActor in
-                    await sendPairingCode(pairingCode)
-                }
+    // ── Reusable pairing code sheet ────────────────────────────────────────
+    @ViewBuilder
+    private func pairingCodeSheet(title: String, subtitle: String) -> some View {
+        VStack(spacing: 12) {
+            Text(title)
+                .font(.headline)
+            Text(subtitle)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            TextField("6-digit code", text: $engine.codeInputText)
+                .keyboardType(.numberPad)
+                .textFieldStyle(.roundedBorder)
+                .frame(maxWidth: 200)
+                .autocorrectionDisabled()
+            HStack(spacing: 12) {
+                Button("Cancel Pairing") { engine.cancelPairing() }
+                    .buttonStyle(.bordered)
+                Button("Confirm Code") { engine.submitCode("") }
+                    .buttonStyle(.borderedProminent)
             }
         }
+        .padding()
+    }
+
+    // ── Bluetooth confirmation sheet ───────────────────────────────────────
+    @ViewBuilder
+    private func pairingBluetoothSheet(title: String, subtitle: String) -> some View {
+        VStack(spacing: 12) {
+            Text(title)
+                .font(.headline)
+            Text(subtitle)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            TextField("Confirm code", text: $engine.bluetoothConfirmInput)
+                .keyboardType(.numberPad)
+                .textFieldStyle(.roundedBorder)
+                .frame(maxWidth: 200)
+                .autocorrectionDisabled()
+            HStack(spacing: 12) {
+                Button("Cancel Connection") { engine.cancelPairing() }
+                    .buttonStyle(.bordered)
+                Button("Confirm Code") { engine.submitBluetoothConfirm("") }
+                    .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding()
     }
 }

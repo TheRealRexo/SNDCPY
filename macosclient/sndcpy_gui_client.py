@@ -288,7 +288,34 @@ class ClientWorker(QObject):
                     self.error.emit(f"Pairing failed: {response}")
             except Exception as e:
                 self.error.emit(str(e))
-    
+
+    def submit_bluetooth_confirm(self, code: str):
+        """Bluetooth handshake: PAIR PROMPT → wait PROMPT_APPROVED → PAIR CONFIRM → wait PAIRED"""
+        if not self.sock:
+            return
+        try:
+            # Step 1: Send PAIR PROMPT
+            self.sock.sendall(b"PAIR PROMPT\n")
+            response = self._read_line().strip()
+            if response == "PROMPT_APPROVED":
+                # Step 2: Server approved — send PAIR CONFIRM
+                self.sock.sendall(b"PAIR CONFIRM\n")
+                response = self._read_line().strip()
+                if response == "PAIRED":
+                    self.message.emit("Paired successfully")
+                    self._derive_session_key()
+                    self.state_changed.emit("connected", "Connected")
+                    self.connected.emit()
+                    self._read_loop()
+                else:
+                    self.error.emit(f"Pairing failed: {response}")
+            elif response == "REJECTED":
+                self.error.emit("Pairing rejected by server")
+            else:
+                self.error.emit(f"Unexpected response: {response}")
+        except Exception as e:
+            self.error.emit(str(e))
+
     def _derive_session_key(self):
         if not CRYPTO_AVAILABLE:
             return
@@ -614,16 +641,44 @@ class SNDCPYWindow(QMainWindow):
         self._log(msg)
     
     def _on_pairing_required(self):
-        # Show alert with pairing code entry via QInputDialog (reverted from inline text box)
-        code, ok = QInputDialog.getText(
-            self, "Pairing Required",
-            "Enter the 6-digit pairing code:",
-            QLineEdit.EchoMode.Normal,
-            ""
-        )
-        if ok and code.strip():
-            self.worker.submit_pairing_code(code.strip())
-        self._log(f"Server requires pairing code - {code if ok else 'cancelled'}")
+        """Show a modal dialog based on the currently selected pairing method."""
+        method = self._selected_method
+        if method == "Code":
+            code, ok = QInputDialog.getText(
+                self, "Enter Pairing Code",
+                "Enter the 6-digit code shown on the server:",
+                QLineEdit.EchoMode.Normal,
+                ""
+            )
+            if ok and code.strip():
+                self.worker.submit_pairing_code(code.strip())
+            else:
+                self._log("Pairing cancelled")
+        elif method == "Bluetooth":
+            # Bluetooth: send PAIR PROMPT, then wait for PROMPT_APPROVED, then send PAIR CONFIRM
+            dlg = QDialog(self)
+            dlg.setWindowTitle("Bluetooth Pairing")
+            dlg.setModal(True)
+            layout = QVBoxLayout(dlg)
+            layout.addWidget(QLabel("Server approved connection.\nEnter the confirm code to complete pairing."))
+            edit = QLineEdit()
+            edit.setPlaceholderText("6-digit confirm code")
+            edit.setInputMask("000000;_")
+            edit.setMaxLength(6)
+            btn_ok = QPushButton("Confirm Code")
+            btn_cancel = QPushButton("Cancel Connection")
+            hlayout = QHBoxLayout()
+            hlayout.addWidget(btn_cancel)
+            hlayout.addWidget(btn_ok)
+            layout.addWidget(edit)
+            layout.addLayout(hlayout)
+            result = dlg.exec()
+            if result == QDialog.DialogCode.Accepted and edit.text().strip():
+                self.worker.submit_bluetooth_confirm(edit.text().strip())
+            else:
+                self._log("Bluetooth pairing cancelled")
+        else:
+            self._log("USB pairing not available — select Code or Bluetooth")
 
     def _on_connected(self):
         self._log("Connected and secured")

@@ -30,6 +30,8 @@
     <array>
         <string>UIInterfaceOrientationPortrait</string>
         <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>NSLocalNetworkUsageDescription</key>
     <string>SNDCPY needs local network access to connect to the server on your Android device.</string>
