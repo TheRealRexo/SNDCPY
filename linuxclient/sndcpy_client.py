@@ -299,7 +299,7 @@ def main():
             resp = _read_line(sock).strip()
             print(f"<< {resp}")
             if resp == "PROMPT_APPROVED":
-                code = input("Enter the confirm code: ").strip()
+                print(">> Confirm pairing...")
                 sock.sendall(b"PAIR CONFIRM\n")
                 print(">> PAIR CONFIRM")
                 resp = _read_line(sock).strip()

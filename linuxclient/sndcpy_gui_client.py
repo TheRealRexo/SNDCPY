@@ -288,7 +288,7 @@ class ClientWorker(QObject):
             except Exception as e:
                 self.error.emit(str(e))
     
-    def submit_bluetooth_confirm(self, code: str):
+    def submit_bluetooth_confirm(self):
         """Bluetooth handshake: PAIR PROMPT -> wait PROMPT_APPROVED -> PAIR CONFIRM -> wait PAIRED"""
         if not self.sock:
             return
@@ -661,21 +661,16 @@ class SNDCPYWindow(QMainWindow):
             dlg.setWindowTitle("Bluetooth Pairing")
             dlg.setModal(True)
             layout = QVBoxLayout(dlg)
-            layout.addWidget(QLabel("Server approved connection.\nEnter the confirm code to complete pairing."))
-            edit = QLineEdit()
-            edit.setPlaceholderText("6-digit confirm code")
-            edit.setInputMask("000000;_")
-            edit.setMaxLength(6)
-            btn_ok = QPushButton("Confirm Code")
+            layout.addWidget(QLabel("Server approved connection.\nDo you want to complete pairing?"))
+            btn_ok = QPushButton("Confirm Pairing")
             btn_cancel = QPushButton("Cancel Connection")
             hlayout = QHBoxLayout()
             hlayout.addWidget(btn_cancel)
             hlayout.addWidget(btn_ok)
-            layout.addWidget(edit)
             layout.addLayout(hlayout)
             result = dlg.exec()
-            if result == QDialog.DialogCode.Accepted and edit.text().strip():
-                self.worker.submit_bluetooth_confirm(edit.text().strip())
+            if result == QDialog.DialogCode.Accepted:
+                self.worker.submit_bluetooth_confirm()
             else:
                 self._log("Bluetooth pairing cancelled")
         else:
