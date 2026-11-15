@@ -41,14 +41,6 @@ class ClientActivity : AppCompatActivity() {
     private lateinit var methodUsbBtn: Button
     private var selectedMethod: SndcpyClient.PairingMethod = SndcpyClient.PairingMethod.CODE
 
-    // Code method UI
-    private lateinit var pairingCodeEditText: EditText
-    private lateinit var sendPairingCodeButton: Button
-
-    // Bluetooth method UI
-    private lateinit var bluetoothConfirmEditText: EditText
-    private lateinit var bluetoothConfirmButton: Button
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_client)
@@ -68,14 +60,6 @@ class ClientActivity : AppCompatActivity() {
         methodCodeBtn = findViewById(R.id.methodCodeBtn)
         methodBluetoothBtn = findViewById(R.id.methodBluetoothBtn)
         methodUsbBtn = findViewById(R.id.methodUsbBtn)
-
-        // Code method UI (always visible by default)
-        pairingCodeEditText = findViewById(R.id.pairingCodeEditText)
-        sendPairingCodeButton = findViewById(R.id.sendPairingCodeButton)
-
-        // Bluetooth method UI
-        bluetoothConfirmEditText = findViewById(R.id.bluetoothConfirmEditText)
-        bluetoothConfirmButton = findViewById(R.id.bluetoothConfirmButton)
 
         // Initialize method selector - highlight default (Code)
         selectMethod(SndcpyClient.PairingMethod.CODE)
@@ -98,12 +82,6 @@ class ClientActivity : AppCompatActivity() {
             }
         }
 
-        sendPairingCodeButton.setOnClickListener {
-            val code = pairingCodeEditText.text.toString().trim()
-            client?.submitPairingCode(code)
-            pairingCodeEditText.text.clear()
-        }
-
         methodCodeBtn.setOnClickListener { selectMethod(SndcpyClient.PairingMethod.CODE) }
         methodBluetoothBtn.setOnClickListener { selectMethod(SndcpyClient.PairingMethod.BLUETOOTH) }
         methodUsbBtn.setOnClickListener { selectMethod(SndcpyClient.PairingMethod.USB) }
@@ -124,30 +102,7 @@ class ClientActivity : AppCompatActivity() {
         methodBluetoothBtn.isSelected = (method == SndcpyClient.PairingMethod.BLUETOOTH)
         methodUsbBtn.isSelected = (method == SndcpyClient.PairingMethod.USB)
 
-        // Hide all method-specific UI
-        pairingCodeEditText.visibility = View.GONE
-        sendPairingCodeButton.visibility = View.GONE
-        bluetoothConfirmEditText.visibility = View.GONE
-        bluetoothConfirmButton.visibility = View.GONE
-
-        // Show the appropriate UI for selected method
-        when (method) {
-            SndcpyClient.PairingMethod.CODE -> {
-                pairingCodeEditText.visibility = View.VISIBLE
-                sendPairingCodeButton.visibility = View.VISIBLE
-                pairingCodeEditText.hint = "Enter 6-digit pairing code"
-            }
-            SndcpyClient.PairingMethod.BLUETOOTH -> {
-                bluetoothConfirmEditText.visibility = View.VISIBLE
-                bluetoothConfirmButton.visibility = View.VISIBLE
-                bluetoothConfirmEditText.hint = "Enter 6-digit confirm code"
-            }
-            SndcpyClient.PairingMethod.USB -> {
-                // USB: just use the code directly, no UI needed beyond code entry
-                // Show info that USB pairing is selected
-                statusTextView.text = "USB pairing selected - connect device via USB cable"
-            }
-        }
+        // Pairing dialogs handle all UI — no permanent input rows needed.
     }
 
     private fun startDiscovery() {

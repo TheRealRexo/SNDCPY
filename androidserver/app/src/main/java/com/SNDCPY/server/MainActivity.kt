@@ -59,9 +59,6 @@ class MainActivity : AppCompatActivity() {
 
         runtime.start()
 
-        // Auto-issue the first pairing code on startup so it is visible immediately.
-        refreshPairingCode()
-
         binding.refreshPairingButton.setOnClickListener { refreshPairingCode() }
         binding.startCaptureButton.setOnClickListener { requestScreenCapture() }
         binding.stopCaptureButton.setOnClickListener { runtime.stopCapture() }
@@ -83,6 +80,11 @@ class MainActivity : AppCompatActivity() {
         // Connect approval callback — require approval BEFORE issuing/displaying pairing code.
         runtime.onConnectRequestReceived = { fingerprint ->
             showConnectApprovalDialog(fingerprint, runtime)
+        }
+
+        // Code display callback — show the 6-digit code in a dialog after approval.
+        runtime.onPairingCodeIssued = { code ->
+            runOnUiThread { showPairingCodeDialog(code) }
         }
     }
 
@@ -140,6 +142,22 @@ class MainActivity : AppCompatActivity() {
                 .setPositiveButton("Start Pairing") { _, _ -> pairingManager.approveConnectApproval() }
                 .setNegativeButton("Decline Connection") { _, _ -> pairingManager.rejectConnectApproval() }
                 .setOnCancelListener { pairingManager.rejectConnectApproval() }
+                .show()
+        }
+    }
+
+    /**
+     * Shows the pairing code in a dialog so the server user can read it.
+     * Called automatically after connect approval is granted.
+     */
+    private fun showPairingCodeDialog(code: String) {
+        runOnUiThread {
+            AlertDialog.Builder(this)
+                .setTitle("Pairing Code")
+                .setMessage("Enter this code on your client device:")
+                .setSingleChoiceItems(arrayOf(code), -1) { _, _ -> }
+                .setPositiveButton("Dismiss") { d, _ -> d.dismiss() }
+                .setCancelable(false)
                 .show()
         }
     }

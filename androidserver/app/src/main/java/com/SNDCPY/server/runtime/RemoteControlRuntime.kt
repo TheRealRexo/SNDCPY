@@ -49,6 +49,12 @@ class RemoteControlRuntime(
      */
     var onConnectRequestReceived: ((fingerprint: String) -> Unit)? = null
 
+    /**
+     * Invoked (on main thread) when a pairing code has been issued after approval.
+     * The UI should surface the code (e.g. in a dialog).
+     */
+    var onPairingCodeIssued: ((code: String) -> Unit)? = null
+
     private val discovery = LocalDiscoveryPrototype()
     private val nsdAdvertiser = NsdAdvertiser(appContext)
     private val udpBroadcaster = UdpBroadcaster(
@@ -178,7 +184,10 @@ class RemoteControlRuntime(
     }
 
     override fun onPairingCodeIssued(code: String) {
-        report("New device requesting pair-in. Code: $code")
+        report("Pairing code issued: $code")
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            onPairingCodeIssued?.invoke(code)
+        }
     }
 
     override fun onPromptPairingRequested(fingerprint: String) {

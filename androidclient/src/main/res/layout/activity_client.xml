@@ -46,7 +46,7 @@
 
     </LinearLayout>
 
-    <!-- Pairing code input row (visibility toggled by method selector) -->
+    <!-- Pairing code input row (hidden — dialog handles pairing) -->
     <LinearLayout
         android:id="@+id/pairingRow"
         android:layout_width="match_parent"
@@ -54,7 +54,7 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:layout_marginBottom="8dp"
-        android:visibility="visible">
+        android:visibility="gone">
 
         <EditText
             android:id="@+id/pairingCodeEditText"
@@ -64,7 +64,7 @@
             android:hint="Enter 6-digit pairing code"
             android:inputType="number"
             android:textAlignment="center"
-            android:visibility="visible" />
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/sendPairingCodeButton"
@@ -72,7 +72,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="Pair"
-            android:visibility="visible" />
+            android:visibility="gone" />
 
     </LinearLayout>
 
