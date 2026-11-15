@@ -1,8 +1,10 @@
 package com.sndcpy.client
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.Dialog
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -172,8 +174,11 @@ class ClientActivity : AppCompatActivity() {
         client = SndcpyClient(host, port)
         client?.onPairingRequired = {
             runOnUiThread {
-                // Show pairing method selector when server requires pairing
-                selectMethod(selectedMethod)
+                when (selectedMethod) {
+                    SndcpyClient.PairingMethod.CODE -> showCodePairingDialog()
+                    SndcpyClient.PairingMethod.BLUETOOTH -> showBluetoothPairingDialog()
+                    SndcpyClient.PairingMethod.USB -> showUsbPairingDialog()
+                }
             }
         }
         client?.connect()
@@ -207,18 +212,66 @@ class ClientActivity : AppCompatActivity() {
         }
     }
 
-    private fun showPairingDialog() {
-        val dialog = Dialog(this)
-        dialog.setContentView(R.layout.dialog_pairing)
-        dialog.setTitle("Pair with server")
-        val pairingEdit = dialog.findViewById<EditText>(R.id.pairingEdit)
-        val pairButton = dialog.findViewById<Button>(R.id.pairButton)
-        pairButton.setOnClickListener {
-            val code = pairingEdit.text.toString().trim()
-            client?.submitPairingCode(code)
-            dialog.dismiss()
-        }
-        dialog.setOnCancelListener { client?.submitPairingCode("") }
+    private fun showCodePairingDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_pairing, null)
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Enter Pairing Code")
+            .setMessage("Enter the 6-digit code shown on the server")
+            .setView(dialogView)
+            .setPositiveButton("Confirm Code") { d, _ ->
+                val pairingEdit = dialogView.findViewById<EditText>(R.id.pairingEdit)
+                val code = pairingEdit.text.toString().trim()
+                client?.submitPairingCode(code)
+                d.dismiss()
+            }
+            .setNegativeButton("Cancel Pairing") { d, _ ->
+                client?.submitPairingCode("")
+                d.dismiss()
+            }
+            .setOnCancelListener { d -> client?.submitPairingCode(""); d.dismiss() }
+            .create()
+        dialog.show()
+    }
+
+    private fun showBluetoothPairingDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_pairing, null)
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Bluetooth Pairing")
+            .setMessage("Server approved. Enter the 6-digit confirm code to complete pairing.")
+            .setView(dialogView)
+            .setPositiveButton("Confirm Code") { d, _ ->
+                val pairingEdit = dialogView.findViewById<EditText>(R.id.pairingEdit)
+                val code = pairingEdit.text.toString().trim()
+                client?.submitPairingCode(code)
+                d.dismiss()
+            }
+            .setNegativeButton("Cancel Connection") { d, _ ->
+                client?.submitPairingCode("")
+                d.dismiss()
+            }
+            .setOnCancelListener { d -> client?.submitPairingCode(""); d.dismiss() }
+            .create()
+        dialog.show()
+    }
+
+    private fun showUsbPairingDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_pairing, null)
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("USB Pairing")
+            .setMessage("Enter the 6-digit code shown on the server")
+            .setView(dialogView)
+            .setPositiveButton("Confirm Code") { d, _ ->
+                val pairingEdit = dialogView.findViewById<EditText>(R.id.pairingEdit)
+                val code = pairingEdit.text.toString().trim()
+                client?.submitPairingCode(code)
+                d.dismiss()
+            }
+            .setNegativeButton("Cancel Pairing") { d, _ ->
+                client?.submitPairingCode("")
+                d.dismiss()
+            }
+            .setOnCancelListener { d -> client?.submitPairingCode(""); d.dismiss() }
+            .create()
         dialog.show()
     }
 

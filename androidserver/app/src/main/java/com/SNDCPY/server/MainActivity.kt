@@ -120,8 +120,8 @@ class MainActivity : AppCompatActivity() {
             AlertDialog.Builder(this)
                 .setTitle("Pairing Request")
                 .setMessage("New device wants to pair.\nFingerprint: ${fingerprint.take(16)}…")
-                .setPositiveButton("Allow") { _, _ -> pairingManager.approvePromptPairing() }
-                .setNegativeButton("Reject") { _, _ -> pairingManager.rejectPromptPairing() }
+                .setPositiveButton("Approve Connection") { _, _ -> pairingManager.approvePromptPairing() }
+                .setNegativeButton("Deny Connection") { _, _ -> pairingManager.rejectPromptPairing() }
                 .setOnCancelListener { pairingManager.rejectPromptPairing() }
                 .show()
         }
@@ -137,8 +137,8 @@ class MainActivity : AppCompatActivity() {
             AlertDialog.Builder(this)
                 .setTitle("Incoming pairing request")
                 .setMessage("A new device wants to pair.\nFingerprint: ${fingerprint.take(16)}…\nApprove?")
-                .setPositiveButton("Allow") { _, _ -> pairingManager.approveConnectApproval() }
-                .setNegativeButton("Reject") { _, _ -> pairingManager.rejectConnectApproval() }
+                .setPositiveButton("Start Pairing") { _, _ -> pairingManager.approveConnectApproval() }
+                .setNegativeButton("Decline Connection") { _, _ -> pairingManager.rejectConnectApproval() }
                 .setOnCancelListener { pairingManager.rejectConnectApproval() }
                 .show()
         }

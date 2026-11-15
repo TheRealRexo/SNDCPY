@@ -8,15 +8,16 @@
 
 | Method | Platforms | How it works |
 |--------|-----------|-------------|
-| **Code** | All platforms | Enter a 6-digit pairing code when connecting |
-| **Bluetooth** | All platforms | Mutual confirmation — both sides display and confirm the same 6-digit code |
+| **Code** | All platforms | Server shows "Start Pairing" / "Decline Connection" → if approved, shows 6-digit code → client enters it and taps "Confirm Code" |
+| **Bluetooth** | All platforms | Server shows "Approve Connection" / "Deny Connection" → if approved, client enters 6-digit confirm code and taps "Confirm Code" |
 | **USB** | Desktop only (macOS, Linux, Windows) | No code needed — plug in via USB cable |
 
 > **iOS**: USB method is filtered out. Code and Bluetooth are available.
 
 ### Security Hardening
 
-- **Approval-before-pairing-code flow** on the Android server: an incoming pairing request is rejected until the server user explicitly taps "Allow". The pairing code is never shown before approval.
+- **Approval-before-pairing-code flow** on the Android server: an incoming pairing request triggers an alert on the server with "Start Pairing" / "Decline Connection" buttons. Only after the server user taps "Start Pairing" is the 6-digit code issued and shown. The pairing code is never revealed before approval.
+- **Bluetooth-style mutual confirmation**: when the client selects Bluetooth pairing, the server shows an alert with "Approve Connection" / "Deny Connection". If approved, the client shows a dialog with "Confirm Code" / "Cancel Connection" — the client must enter the confirm code to complete pairing.
 - **Dependency pins** across both Android modules override vulnerable transitive versions: Netty 4.1.115, protobuf 3.25.5, Guava 33.3.1, jose4j 0.9.6, commons-io 2.16.1, xerces 2.12.2, JDOM 2.0.7.1. (All CVEs previously reported by Dependabot.)
 - Wire protocol unchanged: ECDH P-256 + HKDF-SHA256 → AES-256-GCM per-session encryption.
 

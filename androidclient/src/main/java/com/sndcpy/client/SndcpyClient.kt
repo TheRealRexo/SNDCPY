@@ -135,15 +135,45 @@ class SndcpyClient(
                     android.os.Handler(android.os.Looper.getMainLooper()).post {
                         onPairingRequired?.invoke()
                     }
-                    // Wait for pairing code - blocking is OK here since we're on worker thread
+                    // Wait for the user to enter the code and tap Confirm.
                     val code = waitForPairingCode()
-                    writer.println("PAIR $code")
-                    val result = reader.readLine() ?: throw IOException("No pairing result")
-                    if (result.trim() == "PAIRED") {
-                        listener?.onStateChanged(State.CONNECTED)
-                    } else {
-                        listener?.onStateChanged(State.FAILED, "Pairing rejected by server")
-                        return
+                    when (selectedPairingMethod) {
+                        PairingMethod.CODE, PairingMethod.USB -> {
+                            writer.println("PAIR $code")
+                            val result = reader.readLine() ?: throw IOException("No pairing result")
+                            if (result.trim() == "PAIRED") {
+                                listener?.onStateChanged(State.CONNECTED)
+                            } else {
+                                listener?.onStateChanged(State.FAILED, "Pairing rejected by server")
+                                return
+                            }
+                        }
+                        PairingMethod.BLUETOOTH -> {
+                            // Initiate Bluetooth-style prompt pairing.
+                            writer.println("PAIR PROMPT")
+                            val response = reader.readLine() ?: throw IOException("No pairing response")
+                            when (response.trim()) {
+                                "PROMPT_APPROVED" -> {
+                                    // Server approved — send mutual confirmation.
+                                    writer.println("PAIR CONFIRM")
+                                    val result = reader.readLine() ?: throw IOException("No pairing result")
+                                    if (result.trim() == "PAIRED") {
+                                        listener?.onStateChanged(State.CONNECTED)
+                                    } else {
+                                        listener?.onStateChanged(State.FAILED, "Pairing rejected by server")
+                                        return
+                                    }
+                                }
+                                "REJECTED" -> {
+                                    listener?.onStateChanged(State.FAILED, "Pairing rejected by server")
+                                    return
+                                }
+                                else -> {
+                                    listener?.onStateChanged(State.FAILED, "Unexpected pairing response: $response")
+                                    return
+                                }
+                            }
+                        }
                     }
                 }
                 "ERROR" -> {

@@ -142,7 +142,11 @@ class TcpControlServer(
                 val serverNonce = CryptoEngine.randomNonce()
 
                 if (!pairingManager.isPaired(clientFingerprint)) {
-                    // Require explicit server-side approval BEFORE revealing a pairing code.
+                    // Step 1: Notify UI (on main thread) to show the connect approval dialog.
+                    // The UI must call approveConnectApproval() or rejectConnectApproval()
+                    // on the PairingManager to resolve the latch.
+                    listener.onConnectRequestReceived(clientFingerprint)
+                    // Step 2: Block until the server user decides (approve/reject/timeout).
                     val approved = pairingManager.requestConnectApproval(clientFingerprint) &&
                         pairingManager.waitForConnectDecision()
                     if (!approved) {
@@ -150,7 +154,7 @@ class TcpControlServer(
                         listener.onStatus("Connect request rejected for $remoteAddress ($clientFingerprint)")
                         return
                     }
-                    listener.onConnectRequestReceived(clientFingerprint)
+                    // Step 3: Issue the pairing code and send it to the client.
                     val pairingCode = pairingManager.issuePairingCode()
                     listener.onPairingCodeIssued(pairingCode)
                     writer.println("PAIRING_REQUIRED ${CryptoEngine.encodePublicKey(pairingManager.serverKeyPair.public)} ${CryptoEngine.encodeBytes(serverNonce)}")
