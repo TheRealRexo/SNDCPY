@@ -129,9 +129,11 @@ jobs:
 
       - name: Build macOS Apple Silicon client
         run: |
+          python3 -m venv /tmp/venv_arm64
+          /tmp/venv_arm64/bin/pip install -q pyinstaller
           cd macosclient
-          pip install -r requirements.txt --quiet
-          pyinstaller --onefile --windowed --name SNDCPY-macos-arm64 \
+          /tmp/venv_arm64/bin/pip install -q -r requirements.txt
+          /tmp/venv_arm64/bin/pyinstaller --onefile --windowed --name SNDCPY-macos-arm64 \
             --icon sndcpy.icns \
             --add-data "sndcpy.icns:." \
             --add-data "sndcpy.png:." \
@@ -144,9 +146,11 @@ jobs:
       - name: Install Rosetta and build macOS Intel client
         run: |
           sudo softwareupdate --install-rosetta --agree-to-license || true
+          arch -x86_64 python3 -m venv /tmp/venv_x86_64
+          /tmp/venv_x86_64/bin/pip install -q pyinstaller
           cd macosclient
-          arch -x86_64 python3 -m pip install pyinstaller --quiet
-          arch -x86_64 python3 -m PyInstaller --onefile --windowed --name SNDCPY-macos-x86_64 \
+          /tmp/venv_x86_64/bin/pip install -q -r requirements.txt
+          /tmp/venv_x86_64/bin/pyinstaller --onefile --windowed --name SNDCPY-macos-x86_64 \
             --icon sndcpy.icns \
             --add-data "sndcpy.icns:." \
             --add-data "sndcpy.png:." \
