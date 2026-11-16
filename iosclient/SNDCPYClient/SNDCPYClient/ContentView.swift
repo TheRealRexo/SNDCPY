@@ -315,9 +315,20 @@ final class SNDCPYEngine: ObservableObject {
             if case .connected = self { return true }
             return false
         }
+        var label: String {
+            switch self {
+            case .idle: return "Enter IP and Connect"
+            case .connecting: return "Connecting…"
+            case .pairing: return "Pairing…"
+            case .connected: return "Connected"
+            case .failed: return "Error"
+            }
+        }
     }
 
     @Published var state: State = .idle
+    @Published var statusMessage: String = ""
+    @Published var lastError: String = ""
     let sink = VideoSink()
 
     private var connection: NWConnection?
@@ -360,35 +371,56 @@ final class SNDCPYEngine: ObservableObject {
     }
 
     func connect(host: String, port: UInt16) {
+        // Close any previous connection first
+        let oldConn = connection
+        connection = nil
+        oldConn?.cancel()
+
         let conn = NWConnection(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
         self.connection = conn
+        conn.start(queue: queue)
+        state = .connecting
+        lastError = ""
+        statusMessage = ""
 
         conn.stateUpdateHandler = { [weak self] state in
-            guard let engine = self else { return }
             switch state {
             case .ready:
                 Task { @MainActor in
-                    engine.state = .pairing
+                    guard let self else { return }
+                    self.state = .pairing
+                    self.performHandshake(conn)
                 }
-                let pub = engine.keyPair.publicKey.rawRepresentation.base64EncodedString()
-                let nonce = engine.clientNonce.base64EncodedString()
-                let hello = "HELLO SNDCPY \(pub) \(nonce)\n"
-                conn.send(content: hello.data(using: .utf8), completion: .contentProcessed { _ in
-                    engine.readTextLine { line in engine.handleHandshake(line) }
-                })
+            case .waiting(let e):
+                Task { @MainActor in
+                    self?.statusMessage = e.localizedDescription
+                }
             case .failed(let e):
                 Task { @MainActor in
-                    engine.state = .failed(e.localizedDescription)
+                    guard let self else { return }
+                    // Only surface connection failures, not post-pairing teardown
+                    if self.state == .idle || self.state == .connecting || self.state == .pairing {
+                        self.lastError = e.localizedDescription
+                    }
                 }
             case .cancelled:
-                Task { @MainActor in
-                    engine.state = .idle
-                }
+                break
             default: break
             }
         }
-        conn.start(queue: queue)
-        state = .connecting
+    }
+
+    /// Sends HELLO and reads the server's handshake reply. Runs on the main actor
+    /// so handshake results can set state directly.
+    @MainActor
+    private func performHandshake(_ conn: NWConnection) {
+        let pub = keyPair.publicKey.rawRepresentation.base64EncodedString()
+        let nonce = clientNonce.base64EncodedString()
+        let hello = "HELLO SNDCPY \(pub) \(nonce)\n"
+        conn.send(content: hello.data(using: .utf8), completion: .contentProcessed { [weak self] _ in
+            guard let self else { return }
+            self.readTextLine { line in self.handleHandshake(line) }
+        })
     }
 
     private func readTextLine(_ done: @escaping (String) -> Void) {
@@ -400,7 +432,10 @@ final class SNDCPYEngine: ObservableObject {
                 collected.append(data)
                 if let nl = collected.firstIndex(of: 0x0A) {
                     let line = String(data: collected.prefix(upTo: nl), encoding: .utf8) ?? ""
-                    done(line)
+                    // Dispatch to the main actor since callbacks may touch @Published state
+                    Task { @MainActor in
+                        done(line)
+                    }
                 } else {
                     read()
                 }
@@ -411,32 +446,33 @@ final class SNDCPYEngine: ObservableObject {
 
     private func handleHandshake(_ line: String) {
         let parts = line.split(separator: " ").map(String.init)
-        guard parts.count >= 3 else { state = .failed("Bad handshake"); return }
+        guard parts.count >= 3 else {
+            lastError = "Bad handshake: \(line)"
+            return
+        }
         switch parts[0] {
         case "SECURE":
             serverNonce = Data(base64Encoded: parts[2]) ?? Data()
             deriveSession(serverPublicB64: parts[1])
             finishConnect()
         case "PAIRING_REQUIRED":
-            serverNonce = Data(base64Encoded: parts[2]) ?? Data()
-            deriveSession(serverPublicB64: parts[1])
-            // Show the dialog matching the selected method (only when user is ready)
-            Task { @MainActor in
-                switch selectedPairingMethod {
-                case .code:     showCodeDialog = true
-                case .bluetooth: showBluetoothDialog = true
-                case .usb:      showUsbDialog = true
-                }
+            statusMessage = "Pairing required — choose a method below"
+            // Show the dialog matching the selected method directly (already on main actor)
+            switch selectedPairingMethod {
+            case .code:     showCodeDialog = true
+            case .bluetooth: showBluetoothDialog = true
+            case .usb:      showUsbDialog = true
             }
         default:
-            state = .failed(line)
+            lastError = line
         }
     }
 
     private func deriveSession(serverPublicB64: String) {
         guard let raw = Data(base64Encoded: serverPublicB64),
               let spub = try? P256.KeyAgreement.PublicKey(x963Representation: raw) else {
-            state = .failed("Bad server key"); return
+            lastError = "Bad server key"
+            return
         }
         let salt = clientNonce + serverNonce
         do {
@@ -447,12 +483,14 @@ final class SNDCPYEngine: ObservableObject {
                                                      outputByteCount: 32)
             sessionKey = key
         } catch {
-            state = .failed("Session key failed")
+            lastError = "Session key derivation failed"
         }
     }
 
     private func finishConnect() {
         state = .connected
+        statusMessage = ""
+        lastError = ""
         readFrames = true
         readFrameLoop()
     }
@@ -522,17 +560,19 @@ final class SNDCPYEngine: ObservableObject {
         let code = codeInputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !code.isEmpty else { return }
         showCodeDialog = false
+        lastError = ""
+        statusMessage = "Sending pairing code…"
         guard let conn = connection else { return }
         let data = "PAIR \(code)\n".data(using: .utf8)!
         conn.send(content: data, completion: .contentProcessed { [weak self] _ in
             guard let self = self else { return }
-            Task { @MainActor in
-                self.readTextLine { resp in
-                    if resp.trimmingCharacters(in: .whitespacesAndNewlines) == "PAIRED" {
-                        self.finishConnect()
-                    } else {
-                        self.state = .failed("Pairing rejected by server")
-                    }
+            self.readTextLine { resp in
+                let resp = resp.trimmingCharacters(in: .whitespacesAndNewlines)
+                if resp == "PAIRED" {
+                    self.finishConnect()
+                } else {
+                    self.statusMessage = ""
+                    self.lastError = "Pairing rejected by server"
                 }
             }
         })
@@ -543,33 +583,36 @@ final class SNDCPYEngine: ObservableObject {
     func attemptBluetoothSend() {
         guard let conn = connection else { return }
         showBluetoothDialog = false
+        lastError = ""
+        statusMessage = "Awaiting approval…"
         // Step 1: Send PAIR PROMPT
         let promptData = "PAIR PROMPT\n".data(using: .utf8)!
         conn.send(content: promptData, completion: .contentProcessed { [weak self] _ in
             guard let self = self else { return }
-            Task { @MainActor in
-                self.readTextLine { response in
-                    let resp = response.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if resp == "PROMPT_APPROVED" {
-                        // Step 2: Server approved — send PAIR CONFIRM
-                        let confirmData = "PAIR CONFIRM\n".data(using: .utf8)!
-                        conn.send(content: confirmData, completion: .contentProcessed { [weak self] _ in
-                            guard let self = self else { return }
-                            Task { @MainActor in
-                                self.readTextLine { result in
-                                    if result.trimmingCharacters(in: .whitespacesAndNewlines) == "PAIRED" {
-                                        self.finishConnect()
-                                    } else {
-                                        self.state = .failed("Pairing rejected by server")
-                                    }
-                                }
+            self.readTextLine { response in
+                let resp = response.trimmingCharacters(in: .whitespacesAndNewlines)
+                if resp == "PROMPT_APPROVED" {
+                    self.statusMessage = "Confirming pairing…"
+                    // Step 2: Server approved — send PAIR CONFIRM
+                    let confirmData = "PAIR CONFIRM\n".data(using: .utf8)!
+                    conn.send(content: confirmData, completion: .contentProcessed { [weak self] _ in
+                        guard let self = self else { return }
+                        self.readTextLine { result in
+                            let r = result.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if r == "PAIRED" {
+                                self.finishConnect()
+                            } else {
+                                self.statusMessage = ""
+                                self.lastError = "Pairing rejected by server"
                             }
-                        })
-                    } else if resp == "REJECTED" {
-                        self.state = .failed("Pairing rejected by server")
-                    } else {
-                        self.state = .failed("Unexpected response: \(resp)")
-                    }
+                        }
+                    })
+                } else if resp == "REJECTED" {
+                    self.statusMessage = ""
+                    self.lastError = "Connection rejected — ask the user to approve on the server device"
+                } else {
+                    self.statusMessage = ""
+                    self.lastError = "Unexpected response: \(resp)"
                 }
             }
         })
@@ -581,6 +624,8 @@ final class SNDCPYEngine: ObservableObject {
         connection = nil
         sessionKey = nil
         state = .idle
+        statusMessage = ""
+        lastError = ""
     }
 }
 
@@ -666,7 +711,16 @@ struct ContentView: View {
                     H264View(sink: engine.sink)
                     TouchSurface(engine: engine)
                     if !engine.state.isConnected {
-                        ProgressView(engine.state == .connecting ? "Connecting…" : "Enter IP and Connect")
+                        VStack(spacing: 8) {
+                            if let lastError = engine.lastError, !lastError.isEmpty {
+                                Text(lastError)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal)
+                            }
+                            ProgressView(engine.statusMessage.isEmpty ? (engine.state == .connecting ? "Connecting…" : "Enter IP and Connect") : engine.statusMessage)
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
