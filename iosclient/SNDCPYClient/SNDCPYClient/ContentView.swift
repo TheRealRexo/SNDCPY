@@ -712,8 +712,8 @@ struct ContentView: View {
                     TouchSurface(engine: engine)
                     if !engine.state.isConnected {
                         VStack(spacing: 8) {
-                            if let lastError = engine.lastError, !lastError.isEmpty {
-                                Text(lastError)
+                            if !engine.lastError.isEmpty {
+                                Text(engine.lastError)
                                     .font(.caption)
                                     .foregroundColor(.red)
                                     .multilineTextAlignment(.center)
