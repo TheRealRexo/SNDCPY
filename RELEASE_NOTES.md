@@ -9,7 +9,7 @@
 | Method | Platforms | How it works |
 |--------|-----------|-------------|
 | **Code** | All platforms | Server shows "Start Pairing" / "Decline Connection" → if approved, shows 6-digit code → client enters it and taps "Confirm Code" |
-| **Bluetooth** | All platforms | Server shows "Approve Connection" / "Deny Connection" → if approved, client enters 6-digit confirm code and taps "Confirm Code" |
+| **Bluetooth** | All platforms | Server shows "Approve Connection" / "Deny Connection" → if approved, client taps "Confirm Pairing" to complete (no code required) |
 | **USB** | Desktop only (macOS, Linux, Windows) | No code needed — plug in via USB cable |
 
 > **iOS**: USB method is filtered out. Code and Bluetooth are available.
@@ -17,7 +17,7 @@
 ### Security Hardening
 
 - **Approval-before-pairing-code flow** on the Android server: an incoming pairing request triggers an alert on the server with "Start Pairing" / "Decline Connection" buttons. Only after the server user taps "Start Pairing" is the 6-digit code issued and shown. The pairing code is never revealed before approval.
-- **Bluetooth-style mutual confirmation**: when the client selects Bluetooth pairing, the server shows an alert with "Approve Connection" / "Deny Connection". If approved, the client shows a dialog with "Confirm Code" / "Cancel Connection" — the client must enter the confirm code to complete pairing.
+- **Bluetooth-style mutual confirmation**: when the client selects Bluetooth pairing, the server shows an alert with "Approve Connection" / "Deny Connection". If approved, the client shows a dialog with "Confirm Pairing" / "Cancel Connection" — the client confirms to complete pairing (no code required).
 - **Dependency pins** across both Android modules override vulnerable transitive versions: Netty 4.1.115, protobuf 3.25.5, Guava 33.3.1, jose4j 0.9.6, commons-io 2.16.1, xerces 2.12.2, JDOM 2.0.7.1. (All CVEs previously reported by Dependabot.)
 - Wire protocol unchanged: ECDH P-256 + HKDF-SHA256 → AES-256-GCM per-session encryption.
 
@@ -46,6 +46,7 @@
 - LAN discovery over UDP beacon (`port 27184`).
 - Multi-touch input surface with pointer events.
 - SwiftUI + Network.framework, builds for device (arm64).
+- **Pairing dialog appears on Connect** — the pairing sheet is now shown from the main actor, so it reliably appears after pressing Connect (previously the dialog was dropped because the handshake callback ran on a background dispatch queue).
 - **Unsigned device IPA** — requires a personal provisioning profile to install on device (sideload with AltStore or re-sign with your own certificate).
 
 ### macOS Client
